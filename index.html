@@ -7,6 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
 :root{
   --p:#0A192F;--a:#1E90FF;--bg:#121212;--t:#E0E0E0;
@@ -168,30 +169,20 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
 
 /* ==================================================
    KASIR — UI DIPERBESAR (Touch-Friendly / Elemen Sedang)
-   Scoped hanya untuk halaman kasir (#p-kasir),
-   agar tabel admin tetap padat & rapi.
    ================================================== */
-
-/* Kartu utama kasir */
 #p-kasir .card{
   padding: 28px 32px;
   border-radius: 16px;
 }
-
-/* Judul "Transaksi Baru" */
 #p-kasir h2{
   font-size: 24px;
   margin-bottom: 20px;
   letter-spacing: .2px;
 }
-
-/* Grid field: 280px minimum */
 #p-kasir .g{
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 0 20px;
 }
-
-/* Label field */
 #p-kasir label{
   font-size: 14px;
   font-weight: 500;
@@ -202,8 +193,6 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
   font-size: 12px;
   opacity: .55;
 }
-
-/* Input & Select — elemen besar */
 #p-kasir input,
 #p-kasir select{
   font-size: 19px;
@@ -212,8 +201,6 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
   min-height: 56px;
   line-height: 1.3;
 }
-
-/* Field disabled (No. Struk & Tanggal) */
 #p-kasir #rn,
 #p-kasir #dt{
   font-family: "Courier New", monospace;
@@ -221,8 +208,6 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
   letter-spacing: 1px;
   color: var(--a);
 }
-
-/* ⭐ Field TOTAL PEMBELIAN — paling besar & menonjol */
 #p-kasir #amt{
   font-size: 26px;
   font-weight: 700;
@@ -236,20 +221,14 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
   border-color: var(--grn);
   box-shadow: 0 0 0 4px #3ddc9722;
 }
-
-/* Field No. WhatsApp */
 #p-kasir #wa{
   letter-spacing: .5px;
   font-variant-numeric: tabular-nums;
 }
-
-/* Hint kecil di bawah No. WA */
 #p-kasir .hint{
   font-size: 12px;
   margin-top: 6px;
 }
-
-/* Checkbox Auto-WA — dibuat seperti kartu kecil */
 #p-kasir .chk{
   margin-top: 22px;
   padding: 16px 18px;
@@ -277,14 +256,10 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
   opacity: 1;
   cursor: pointer;
 }
-
-/* Baris tombol aksi */
 #p-kasir .row{
   margin-top: 26px;
   gap: 14px;
 }
-
-/* Tombol aksi — elemen besar */
 #p-kasir button{
   font-size: 16px;
   font-weight: 600;
@@ -293,20 +268,12 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
   min-height: 54px;
   letter-spacing: .2px;
 }
-
-/* ==================================================
-   MODAL STRUK — Perbesar tombol aksi di bawah struk
-   ================================================== */
 #mbox > .row button{
   font-size: 15px;
   padding: 14px 24px;
   border-radius: 10px;
   min-height: 48px;
 }
-
-/* ==================================================
-   RESPONSIVE — Mobile sedikit lebih kompak
-   ================================================== */
 @media(max-width:640px){
   #p-kasir .card{
     padding: 20px 18px;
@@ -356,6 +323,62 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
     flex: 1 1 auto;
   }
 }
+
+/* ==================================================
+   HALAMAN STATISTIK — Grafik & Charts
+   ================================================== */
+#p-stat .stat-summary{
+  display:grid;
+  gap:12px;
+  grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+  margin-bottom:16px;
+}
+#p-stat .stat-grid{
+  display:grid;
+  gap:16px;
+  grid-template-columns:repeat(auto-fit,minmax(360px,1fr));
+}
+#p-stat .chart-card{
+  background:var(--card);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:18px 20px;
+  margin-bottom:16px;
+}
+#p-stat .chart-card h3{
+  margin:0 0 4px;
+  font-size:15px;
+  color:var(--a);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  flex-wrap:wrap;
+}
+#p-stat .chart-badge{
+  display:inline-block;
+  background:#0d1626;
+  color:var(--a);
+  padding:3px 10px;
+  border-radius:20px;
+  font-size:11px;
+  font-weight:600;
+  border:1px solid var(--line);
+}
+#p-stat .chart-sub{
+  font-size:12px;
+  opacity:.65;
+  margin:0 0 14px;
+}
+#p-stat .chart-wrap{
+  position:relative;
+  height:280px;
+}
+@media(max-width:640px){
+  #p-stat .chart-wrap{height:240px}
+  #p-stat .chart-card{padding:14px}
+  #p-stat .stat-grid{grid-template-columns:1fr}
+}
 </style>
 </head>
 <body>
@@ -369,6 +392,7 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
     <a href="#komisi" data-p="komisi" class="ad">Komisi</a>
     <a href="#rekap" data-p="rekap" class="ad">Rekap Harian</a>
     <a href="#set" data-p="set" class="ad">Pengaturan</a>
+    <a href="#stat" data-p="stat" class="ad">Statistik</a>
     <a href="#login" data-p="login" id="lnkAdmin">Admin</a>
     <a href="#" id="lnkOut" style="display:none">Keluar</a>
   </nav>
@@ -522,6 +546,64 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
     </div>
   </div>
 </section>
+
+<!-- ============ STATISTIK ============ -->
+<section class="sec" id="p-stat">
+  <div class="card">
+    <h2>📈 Statistik & Analitik</h2>
+    <p style="margin:0 0 16px;font-size:13px;opacity:.7">
+      Ringkasan performa toko berdasarkan data transaksi & pengeluaran realtime dari Firestore.
+    </p>
+    <div class="stat-summary" id="stat-summary"></div>
+  </div>
+
+  <div class="stat-grid">
+    <div class="chart-card">
+      <h3>
+        <span>👥 Customer Harian</span>
+        <span class="chart-badge">30 Hari Terakhir</span>
+      </h3>
+      <p class="chart-sub">Jumlah kendaraan yang dicuci setiap hari</p>
+      <div class="chart-wrap"><canvas id="ch-daily"></canvas></div>
+    </div>
+
+    <div class="chart-card">
+      <h3>
+        <span>📅 Customer Bulanan</span>
+        <span class="chart-badge">12 Bulan Terakhir</span>
+      </h3>
+      <p class="chart-sub">Tren jumlah customer per bulan</p>
+      <div class="chart-wrap"><canvas id="ch-monthly"></canvas></div>
+    </div>
+
+    <div class="chart-card">
+      <h3>
+        <span>🗓️ Customer Tahunan</span>
+        <span class="chart-badge">All Time</span>
+      </h3>
+      <p class="chart-sub">Total customer per tahun</p>
+      <div class="chart-wrap"><canvas id="ch-yearly"></canvas></div>
+    </div>
+
+    <div class="chart-card">
+      <h3>
+        <span>💸 Pengeluaran Toko Bulanan</span>
+        <span class="chart-badge">12 Bulan Terakhir</span>
+      </h3>
+      <p class="chart-sub">Total pengeluaran operasional per bulan (Rp)</p>
+      <div class="chart-wrap"><canvas id="ch-expense"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <h3>
+      <span>🥧 Pengeluaran per Kategori</span>
+      <span class="chart-badge">12 Bulan Terakhir</span>
+    </h3>
+    <p class="chart-sub">Distribusi pengeluaran berdasarkan kategori</p>
+    <div class="chart-wrap" style="height:340px"><canvas id="ch-category"></canvas></div>
+  </div>
+</section>
 </main>
 
 <!-- ============ MODAL STRUK ============ -->
@@ -560,16 +642,11 @@ const firebaseConfig = {
 
 /* ============================================================
    OPSIONAL: WhatsApp API Otomatis (tanpa klik)
-   Jika ingin kirim struk OTOMATIS tanpa membuka WhatsApp Web,
-   daftarkan nomor pengirim ke layanan pihak ketiga (Fonnte /
-   Wablas / Watzap / dll), lalu isi token di bawah.
-   Biarkan kosong jika tidak dipakai — maka sistem akan memakai
-   WhatsApp Click-to-Chat (wa.me) yang membuka WhatsApp Web.
    ============================================================ */
 const WA_GATEWAY = {
-  provider: "",        // "fonnte" | "wablas" | "" (kosongkan jika tidak dipakai)
-  token: "",           // API token dari provider
-  endpoint: ""         // contoh Fonnte: "https://api.fonnte.com/send"
+  provider: "",
+  token: "",
+  endpoint: ""
 };
 /* ============================================================ */
 
@@ -589,12 +666,6 @@ const fdt = d => d.toLocaleString("id-ID", {dateStyle:"medium", timeStyle:"short
 const fmtNum = n => (Number(n) || 0).toLocaleString("id-ID");
 const parseNum = s => Number(String(s).replace(/[^\d]/g, "")) || 0;
 
-/**
- * Normalisasi nomor WhatsApp ke format internasional (628xx)
- *  - 08123456789  -> 628123456789
- *  - +62812345678 -> 62812345678
- *  - 8123456789   -> 628123456789
- */
 function normalizeWA(input) {
   let s = String(input || "").replace(/[^\d+]/g, "").replace(/^\+/, "");
   if (s.startsWith("0")) s = "62" + s.slice(1);
@@ -685,17 +756,19 @@ onSnapshot(query(collection(db, "transactions"), orderBy("timestamp", "desc")), 
   S.tx = s.docs.map(d => ({id: d.id, ...d.data()}));
   renderAdmin();
   nextNo();
+  if ($("#p-stat").classList.contains("on")) renderStatistik();
 }, err);
 
 onSnapshot(query(collection(db, "expenses"), orderBy("timestamp", "desc")), s => {
   S.ex = s.docs.map(d => ({id: d.id, ...d.data()}));
   renderAdmin();
+  if ($("#p-stat").classList.contains("on")) renderStatistik();
 }, err);
 
 /* ---------- Router ---------- */
 const adm = () => sessionStorage.getItem("adm") === "1";
-const PAGES = ["kasir","login","dash","buku","komisi","rekap","set"];
-const ADMIN_PAGES = ["dash","buku","komisi","rekap","set"];
+const PAGES = ["kasir","login","dash","buku","komisi","rekap","set","stat"];
+const ADMIN_PAGES = ["dash","buku","komisi","rekap","set","stat"];
 
 function route() {
   let p = location.hash.slice(1) || "kasir";
@@ -709,6 +782,7 @@ function route() {
   $("#lnkOut").style.display = adm() ? "" : "none";
   $("#bar").classList.toggle("on", ["dash","buku","komisi","rekap"].includes(p));
   if (p === "kasir") tick();
+  if (p === "stat") setTimeout(renderStatistik, 60);
   renderAdmin();
 }
 addEventListener("hashchange", route);
@@ -758,7 +832,6 @@ $("#vt").onchange = () => {
   $("#amt").value = k ? fmtNum(S.price[k].rate) : "";
 };
 
-// Format angka otomatis saat mengetik
 $("#amt").addEventListener("input", e => {
   const n = parseNum(e.target.value);
   e.target.value = n ? fmtNum(n) : "";
@@ -768,7 +841,6 @@ $("#ea").addEventListener("input", e => {
   e.target.value = n ? fmtNum(n) : "";
 });
 
-// Validasi live nomor WA
 $("#wa").addEventListener("input", e => {
   const v = e.target.value.trim();
   if (!v) { e.target.style.borderColor = ""; return; }
@@ -841,11 +913,9 @@ async function save(print) {
     await addDoc(collection(db, "transactions"), {...data, timestamp: serverTimestamp()});
     toast("Transaksi tersimpan ✔", "ok");
 
-    // Auto buka WhatsApp kalau dicentang & nomor ada
     const shouldWA = $("#autowa").checked && data.whatsapp;
     if (print) showStruk(data, now, shouldWA);
 
-    // Kirim WhatsApp (harus dalam user gesture yang sama agar popup tidak diblokir)
     if (shouldWA) {
       setTimeout(() => openWhatsApp(data, now, true), print ? 350 : 0);
     }
@@ -861,14 +931,13 @@ async function save(print) {
 $("#sp").onclick = () => save(true);
 $("#ss").onclick = () => save(false);
 
-// Keyboard: Ctrl+Enter untuk simpan+cetak
 document.addEventListener("keydown", e => {
   if (!$("#p-kasir").classList.contains("on")) return;
   if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); save(true); }
 });
 
 /* ---------- Tampilkan Struk ---------- */
-let _lastStruk = null; // simpan data untuk tombol WA di modal
+let _lastStruk = null;
 
 function showStruk(d, t, showWABtn) {
   _lastStruk = {data: d, time: t};
@@ -934,7 +1003,6 @@ async function openWhatsApp(d, t, silent) {
   if (!isValidWA(phone)) return toast("Nomor WhatsApp tidak valid.", "err");
   const text = buildWAText(d, t);
 
-  // === Mode Gateway API (opsional) ===
   if (WA_GATEWAY.provider && WA_GATEWAY.token && WA_GATEWAY.endpoint) {
     try {
       const res = await fetch(WA_GATEWAY.endpoint, {
@@ -951,11 +1019,9 @@ async function openWhatsApp(d, t, silent) {
     } catch (e) {
       console.error("WA Gateway gagal:", e);
       toast("Gateway WA gagal, membuka WhatsApp Web…", "err");
-      // fallthrough ke click-to-chat
     }
   }
 
-  // === Mode Click-to-Chat (default) ===
   const url = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
   const w = window.open(url, "_blank", "noopener");
   if (!w && !silent) toast("Popup diblokir. Izinkan popup untuk kirim WA otomatis.", "err");
@@ -1018,7 +1084,6 @@ function renderAdmin() {
     ["Laba Bersih", rp(net), net >= 0 ? "hi" : "lo"]
   ].map(([a, b, cls]) => `<div class="stat ${cls}"><small>${a}</small><div>${b}</div></div>`).join("");
 
-  // Tabel pemasukan
   $("#tin").innerHTML = tbl(
     ["No. Struk","Tanggal","Kendaraan","Plat","Operator","Bayar","WA","Jumlah","Aksi"],
     tx.map(t => [
@@ -1040,7 +1105,6 @@ function renderAdmin() {
     ["","","","","","","","TOTAL", rp(inc)]
   );
 
-  // Tabel pengeluaran
   $("#tex").innerHTML = tbl(
     ["Tanggal","Keterangan","Kategori","Jumlah","Aksi"],
     ex.map(e => [
@@ -1054,7 +1118,6 @@ function renderAdmin() {
     ["","","TOTAL", rp(out),""]
   );
 
-  // Komisi
   const m = {};
   tx.forEach(t => {
     const o = m[t.operatorName] ??= {c: Object.fromEntries(VK.map(k => [k, 0])), n: 0, r: 0, k: 0};
@@ -1080,7 +1143,6 @@ function renderAdmin() {
       : null
   );
 
-  // Rekap harian
   const days = {};
   const D = d => days[d] ??= {n: 0, pay: {}, inc: 0, out: 0};
   tx.forEach(t => {
@@ -1276,6 +1338,316 @@ document.addEventListener("click", async e => {
     if (e.key === "Enter") e.target.parentElement.querySelector("button[data-add]").click();
   });
 });
+
+/* ============================================================
+   STATISTIK & GRAFIK (Chart.js)
+   ============================================================ */
+let _charts = {};
+
+function destroyCharts() {
+  Object.values(_charts).forEach(c => { try { c.destroy(); } catch(e){} });
+  _charts = {};
+}
+
+const chartColors = {
+  blue:     "rgba(30,144,255,0.75)",
+  blueLine: "#1E90FF",
+  blueFill: "rgba(30,144,255,0.15)",
+  red:      "rgba(255,92,108,0.8)",
+  green:    "rgba(61,220,151,0.8)"
+};
+
+const chartBaseOpts = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: "#0d1626",
+      borderColor: "#25395c",
+      borderWidth: 1,
+      titleColor: "#1E90FF",
+      bodyColor: "#E0E0E0",
+      padding: 10,
+      cornerRadius: 8
+    }
+  },
+  scales: {
+    x: {
+      grid: { color: "#1a2a44" },
+      ticks: { color: "#8898b8", font: { size: 11 }, maxRotation: 0, autoSkipPadding: 12 }
+    },
+    y: {
+      grid: { color: "#1a2a44" },
+      ticks: { color: "#8898b8", font: { size: 11 }, precision: 0 },
+      beginAtZero: true
+    }
+  }
+};
+
+function renderStatistik() {
+  if (!adm()) return;
+  if (typeof Chart === "undefined") {
+    console.warn("Chart.js belum termuat.");
+    return;
+  }
+  destroyCharts();
+
+  const now = new Date();
+
+  /* ============ 1. CUSTOMER HARIAN (30 hari terakhir) ============ */
+  const dailyLabels = [], dailyCounts = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = ymd(d);
+    dailyLabels.push(d.toLocaleDateString("id-ID", { day: "2-digit", month: "short" }));
+    dailyCounts.push(S.tx.filter(t => ymd(tsd(t)) === key).length);
+  }
+  const cvD = document.getElementById("ch-daily");
+  if (cvD) {
+    _charts.daily = new Chart(cvD, {
+      type: "line",
+      data: {
+        labels: dailyLabels,
+        datasets: [{
+          label: "Customer",
+          data: dailyCounts,
+          borderColor: chartColors.blueLine,
+          backgroundColor: chartColors.blueFill,
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2,
+          pointRadius: 3,
+          pointHoverRadius: 6,
+          pointBackgroundColor: chartColors.blueLine,
+          pointBorderColor: "#0d1626",
+          pointBorderWidth: 2
+        }]
+      },
+      options: chartBaseOpts
+    });
+  }
+
+  /* ============ 2. CUSTOMER BULANAN (12 bulan terakhir) ============ */
+  const monthLabels = [], monthCounts = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - i);
+    const ym = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+    monthLabels.push(d.toLocaleDateString("id-ID", { month: "short", year: "2-digit" }));
+    monthCounts.push(S.tx.filter(t => ymd(tsd(t)).startsWith(ym)).length);
+  }
+  const cvM = document.getElementById("ch-monthly");
+  if (cvM) {
+    _charts.monthly = new Chart(cvM, {
+      type: "bar",
+      data: {
+        labels: monthLabels,
+        datasets: [{
+          label: "Customer",
+          data: monthCounts,
+          backgroundColor: chartColors.blue,
+          hoverBackgroundColor: chartColors.blueLine,
+          borderRadius: 6,
+          borderSkipped: false,
+          maxBarThickness: 42
+        }]
+      },
+      options: chartBaseOpts
+    });
+  }
+
+  /* ============ 3. CUSTOMER TAHUNAN ============ */
+  const years = new Set();
+  S.tx.forEach(t => years.add(tsd(t).getFullYear()));
+  const sortedYears = [...years].sort();
+  const yearCounts = sortedYears.map(y => S.tx.filter(t => tsd(t).getFullYear() === y).length);
+  const cvY = document.getElementById("ch-yearly");
+  if (cvY) {
+    _charts.yearly = new Chart(cvY, {
+      type: "bar",
+      data: {
+        labels: sortedYears.length ? sortedYears.map(String) : [String(now.getFullYear())],
+        datasets: [{
+          label: "Customer",
+          data: yearCounts.length ? yearCounts : [0],
+          backgroundColor: chartColors.green,
+          hoverBackgroundColor: "#3ddc97",
+          borderRadius: 6,
+          borderSkipped: false,
+          maxBarThickness: 80
+        }]
+      },
+      options: chartBaseOpts
+    });
+  }
+
+  /* ============ 4. PENGELUARAN BULANAN (12 bulan terakhir) ============ */
+  const exLabels = [], exTotals = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(1);
+    d.setMonth(d.getMonth() - i);
+    const ym = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0");
+    exLabels.push(d.toLocaleDateString("id-ID", { month: "short", year: "2-digit" }));
+    exTotals.push(
+      S.ex.filter(e => ymd(tsd(e)).startsWith(ym))
+          .reduce((a, e) => a + (Number(e.amount) || 0), 0)
+    );
+  }
+  const cvE = document.getElementById("ch-expense");
+  if (cvE) {
+    _charts.expense = new Chart(cvE, {
+      type: "bar",
+      data: {
+        labels: exLabels,
+        datasets: [{
+          label: "Pengeluaran",
+          data: exTotals,
+          backgroundColor: chartColors.red,
+          hoverBackgroundColor: "#ff5c6c",
+          borderRadius: 6,
+          borderSkipped: false,
+          maxBarThickness: 42
+        }]
+      },
+      options: {
+        ...chartBaseOpts,
+        plugins: {
+          ...chartBaseOpts.plugins,
+          tooltip: {
+            ...chartBaseOpts.plugins.tooltip,
+            callbacks: {
+              label: ctx => "Rp" + (ctx.parsed.y || 0).toLocaleString("id-ID")
+            }
+          }
+        },
+        scales: {
+          ...chartBaseOpts.scales,
+          y: {
+            ...chartBaseOpts.scales.y,
+            ticks: {
+              ...chartBaseOpts.scales.y.ticks,
+              callback: v => v >= 1000000
+                ? "Rp" + (v / 1000000).toFixed(1).replace(/\.0$/, "") + "jt"
+                : v >= 1000
+                  ? "Rp" + (v / 1000).toFixed(0) + "rb"
+                  : "Rp" + v
+            }
+          }
+        }
+      }
+    });
+  }
+
+  /* ============ 5. PIE CHART: Pengeluaran per Kategori ============ */
+  const cutoff = new Date();
+  cutoff.setMonth(cutoff.getMonth() - 11);
+  cutoff.setDate(1);
+  const recentEx = S.ex.filter(e => tsd(e) >= cutoff);
+  const byCat = {};
+  recentEx.forEach(e => {
+    byCat[e.category] = (byCat[e.category] || 0) + (Number(e.amount) || 0);
+  });
+  const catLabels = Object.keys(byCat);
+  const catVals = Object.values(byCat);
+  const cvC = document.getElementById("ch-category");
+  if (cvC) {
+    _charts.category = new Chart(cvC, {
+      type: "doughnut",
+      data: {
+        labels: catLabels.length ? catLabels : ["Belum ada data"],
+        datasets: [{
+          data: catVals.length ? catVals : [1],
+          backgroundColor: [
+            "#1E90FF","#3ddc97","#ff5c6c","#ffb648",
+            "#9370DB","#20B2AA","#FF69B4","#7B68EE"
+          ],
+          borderColor: "#16233b",
+          borderWidth: 3,
+          hoverOffset: 8
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: "58%",
+        plugins: {
+          legend: {
+            position: "bottom",
+            labels: {
+              color: "#E0E0E0",
+              padding: 14,
+              font: { size: 12 },
+              usePointStyle: true,
+              pointStyle: "circle"
+            }
+          },
+          tooltip: {
+            backgroundColor: "#0d1626",
+            borderColor: "#25395c",
+            borderWidth: 1,
+            padding: 10,
+            callbacks: {
+              label: ctx => {
+                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                const val = ctx.parsed || 0;
+                const pct = total ? ((val / total) * 100).toFixed(1) : 0;
+                return `${ctx.label}: Rp${val.toLocaleString("id-ID")} (${pct}%)`;
+              }
+            }
+          }
+        }
+      }
+    });
+  }
+
+  /* ============ 6. SUMMARY CARDS ============ */
+  const todayKey = ymd(now);
+  const thisMonth = todayKey.slice(0, 7);
+  const thisYear = now.getFullYear();
+
+  const custToday = S.tx.filter(t => ymd(tsd(t)) === todayKey).length;
+  const custMonth = S.tx.filter(t => ymd(tsd(t)).startsWith(thisMonth)).length;
+  const custYear = S.tx.filter(t => tsd(t).getFullYear() === thisYear).length;
+  const custAll = S.tx.length;
+
+  const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevMonthKey = prevMonthDate.getFullYear() + "-" + String(prevMonthDate.getMonth() + 1).padStart(2, "0");
+  const custPrevMonth = S.tx.filter(t => ymd(tsd(t)).startsWith(prevMonthKey)).length;
+  const growth = custPrevMonth > 0
+    ? (((custMonth - custPrevMonth) / custPrevMonth) * 100).toFixed(1)
+    : (custMonth > 0 ? "100" : "0");
+  const growthCls = Number(growth) >= 0 ? "hi" : "lo";
+  const growthIcon = Number(growth) >= 0 ? "▲" : "▼";
+
+  const el = document.getElementById("stat-summary");
+  if (el) {
+    el.innerHTML = `
+      <div class="stat">
+        <small>Customer Hari Ini</small>
+        <div>${custToday}</div>
+      </div>
+      <div class="stat">
+        <small>Customer Bulan Ini</small>
+        <div>${custMonth}</div>
+      </div>
+      <div class="stat ${growthCls}">
+        <small>Pertumbuhan vs Bulan Lalu</small>
+        <div>${growthIcon} ${growth}%</div>
+      </div>
+      <div class="stat">
+        <small>Customer Tahun ${thisYear}</small>
+        <div>${custYear}</div>
+      </div>
+      <div class="stat hi">
+        <small>Total Customer (All Time)</small>
+        <div>${custAll}</div>
+      </div>`;
+  }
+}
 
 /* ---------- Init ---------- */
 fillKasir();
