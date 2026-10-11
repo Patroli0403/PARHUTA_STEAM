@@ -623,8 +623,7 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getFirestore,collection,doc,onSnapshot,addDoc,setDoc,deleteDoc,
-  serverTimestamp,Timestamp,query,orderBy
+initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, onSnapshot, addDoc, setDoc, deleteDoc, serverTimestamp, Timestamp, query, orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 /* ============================================================
@@ -715,7 +714,11 @@ const inR = a => a.filter(o => {
 /* ---------- Init Firebase ---------- */
 let db;
 try {
-  db = getFirestore(initializeApp(firebaseConfig));
+  db = initializeFirestore(initializeApp(firebaseConfig), {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager()
+    })
+  });
 } catch(e) {
   console.error(e);
   $("#warn").style.display = "block";
