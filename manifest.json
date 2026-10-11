@@ -1,0 +1,15 @@
+{
+  "name": "Parhuta Steam - Kasir & Admin",
+  "short_name": "Parhuta Steam",
+  "description": "Aplikasi kasir & pembukuan Parhuta Steam",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0A192F",
+  "theme_color": "#1E90FF",
+  "lang": "id",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
