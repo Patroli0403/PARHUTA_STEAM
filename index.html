@@ -10,7 +10,8 @@
 <style>
 :root{
   --p:#0A192F;--a:#1E90FF;--bg:#121212;--t:#E0E0E0;
-  --card:#16233b;--line:#25395c;--red:#ff5c6c;--grn:#3ddc97;--yel:#ffb648;
+  --card:#16233b;--line:#25395c;--red:#ff5c6c;--grn:#3ddc97;
+  --wa:#25D366;
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
@@ -43,6 +44,7 @@ h2{margin:0 0 12px;font-size:18px}
 h3{margin:14px 0 8px;font-size:15px;color:var(--a)}
 h3:first-child{margin-top:0}
 label{display:block;font-size:12px;margin:10px 0 4px;opacity:.8}
+label .opt{opacity:.5;font-size:11px;font-weight:400}
 input,select,textarea{
   width:100%;padding:10px;border-radius:8px;
   border:1px solid var(--line);background:#0d1626;color:var(--t);
@@ -59,10 +61,12 @@ button{
 button.s{background:#2a3d5f}
 button.d{background:var(--red)}
 button.g2{background:var(--grn);color:#052e1e}
+button.wa{background:var(--wa);color:#fff}
 button:not(:disabled):hover{filter:brightness(1.15)}
 button:disabled{opacity:.6;cursor:not-allowed}
 .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;align-items:center}
 .row.b{margin:0 0 10px;justify-content:space-between}
+.row.c{justify-content:center}
 .stats{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
 .stat{background:#0d1626;border:1px solid var(--line);border-radius:10px;padding:12px}
 .stat small{opacity:.7;display:block;font-size:12px}
@@ -89,7 +93,6 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
 #bar{display:none;align-items:end;gap:10px;flex-wrap:wrap}
 #bar.on{display:flex}
 #bar .fld{width:170px}
-#bar .fld.wide{width:auto}
 #toast{
   position:fixed;bottom:18px;left:50%;transform:translateX(-50%);
   background:var(--a);color:#fff;padding:10px 18px;border-radius:10px;
@@ -135,10 +138,18 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
 }
 .icon-btn:hover{background:var(--a);color:#fff;border-color:var(--a)}
 .icon-btn.del:hover{background:var(--red);border-color:var(--red)}
+.icon-btn.wa:hover{background:var(--wa);border-color:var(--wa)}
 .empty{text-align:center;padding:20px;opacity:.6;font-size:13px}
 .hr-sect{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 .hr-sect button{padding:6px 10px;font-size:12px;background:#0d1626;border:1px solid var(--line)}
 .hr-sect button:hover{background:var(--a);border-color:var(--a)}
+.hint{
+  font-size:11px;opacity:.6;margin-top:4px;display:block;
+}
+/* Checkbox khusus auto-WA */
+.chk{display:flex;align-items:center;gap:8px;margin-top:14px;font-size:13px}
+.chk input{width:auto;padding:0;margin:0;cursor:pointer;accent-color:var(--wa);width:16px;height:16px}
+.chk label{margin:0;cursor:pointer;font-size:13px;opacity:1}
 @media print{
   body > *:not(#modal){display:none !important}
   #modal{position:static;background:none;display:block !important;padding:0}
@@ -191,15 +202,30 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
       <div><label>Nomor Struk</label><input id="rn" disabled></div>
       <div><label>Tanggal & Jam</label><input id="dt" disabled></div>
       <div><label>Jenis Kendaraan</label><select id="vt"></select></div>
-      <div><label>Plat Nomor (opsional)</label><input id="plat" placeholder="BB 1234 XY" maxlength="15"></div>
+      <div>
+        <label>Nama Kendaraan <span class="opt">(opsional)</span></label>
+        <input id="vname" placeholder="cth: Honda Vario / Avanza" maxlength="40">
+      </div>
+      <div><label>Plat Nomor <span class="opt">(opsional)</span></label><input id="plat" placeholder="BB 1234 XY" maxlength="15"></div>
+      <div>
+        <label>No. WhatsApp Customer <span class="opt">(opsional)</span></label>
+        <input id="wa" placeholder="08123456789" inputmode="tel" maxlength="20" autocomplete="off">
+        <span class="hint">Format: 08xx atau 628xx. Untuk kirim struk otomatis.</span>
+      </div>
       <div><label>Nama Operator</label><select id="op"></select></div>
       <div><label>Jenis Pembayaran</label><select id="pay"></select></div>
       <div>
         <label>Total Pembelian (Rp)</label>
         <input type="text" id="amt" inputmode="numeric" placeholder="0" autocomplete="off">
       </div>
-      <div><label>Catatan (opsional)</label><input id="note" maxlength="80"></div>
+      <div><label>Catatan <span class="opt">(opsional)</span></label><input id="note" maxlength="80"></div>
     </div>
+
+    <div class="chk">
+      <input type="checkbox" id="autowa" checked>
+      <label for="autowa">📲 Buka WhatsApp otomatis setelah simpan (kirim struk ke customer)</label>
+    </div>
+
     <div class="row">
       <button id="sp">💾 Simpan & Cetak</button>
       <button class="s" id="ss">Simpan Saja</button>
@@ -311,8 +337,9 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
 <div id="modal">
   <div id="mbox">
     <div id="struk"></div>
-    <div class="row">
+    <div class="row c">
       <button id="pr">🖨 Cetak</button>
+      <button class="wa" id="pwa" style="display:none">📲 Kirim WhatsApp</button>
       <button class="s" id="pc">Tutup</button>
     </div>
   </div>
@@ -329,8 +356,6 @@ import {
 
 /* ============================================================
    KONFIGURASI FIREBASE
-   Isi nilai di bawah dengan data dari Firebase Console:
-   Project Settings > Your apps > Web App > SDK setup and config
    ============================================================ */
 const firebaseConfig = {
   apiKey: "AIzaSyBjUxHilQQcn4jncrobuHS9f1wwaYp01Ms",
@@ -339,6 +364,21 @@ const firebaseConfig = {
   storageBucket: "parhuta-steam.firebasestorage.app",
   messagingSenderId: "671904693096",
   appId: "1:671904693096:web:ce4e71e0c9f7a347cfb4dd"
+};
+/* ============================================================ */
+
+/* ============================================================
+   OPSIONAL: WhatsApp API Otomatis (tanpa klik)
+   Jika ingin kirim struk OTOMATIS tanpa membuka WhatsApp Web,
+   daftarkan nomor pengirim ke layanan pihak ketiga (Fonnte /
+   Wablas / Watzap / dll), lalu isi token di bawah.
+   Biarkan kosong jika tidak dipakai — maka sistem akan memakai
+   WhatsApp Click-to-Chat (wa.me) yang membuka WhatsApp Web.
+   ============================================================ */
+const WA_GATEWAY = {
+  provider: "",        // "fonnte" | "wablas" | "" (kosongkan jika tidak dipakai)
+  token: "",           // API token dari provider
+  endpoint: ""         // contoh Fonnte: "https://api.fonnte.com/send"
 };
 /* ============================================================ */
 
@@ -357,6 +397,23 @@ const ymd = d => {
 const fdt = d => d.toLocaleString("id-ID", {dateStyle:"medium", timeStyle:"short"});
 const fmtNum = n => (Number(n) || 0).toLocaleString("id-ID");
 const parseNum = s => Number(String(s).replace(/[^\d]/g, "")) || 0;
+
+/**
+ * Normalisasi nomor WhatsApp ke format internasional (628xx)
+ *  - 08123456789  -> 628123456789
+ *  - +62812345678 -> 62812345678
+ *  - 8123456789   -> 628123456789
+ */
+function normalizeWA(input) {
+  let s = String(input || "").replace(/[^\d+]/g, "").replace(/^\+/, "");
+  if (s.startsWith("0")) s = "62" + s.slice(1);
+  else if (s.startsWith("8")) s = "62" + s;
+  return s;
+}
+function isValidWA(input) {
+  const s = normalizeWA(input);
+  return /^62\d{8,14}$/.test(s);
+}
 
 function toast(msg, type="") {
   const t = $("#toast");
@@ -520,6 +577,13 @@ $("#ea").addEventListener("input", e => {
   e.target.value = n ? fmtNum(n) : "";
 });
 
+// Validasi live nomor WA
+$("#wa").addEventListener("input", e => {
+  const v = e.target.value.trim();
+  if (!v) { e.target.style.borderColor = ""; return; }
+  e.target.style.borderColor = isValidWA(v) ? "var(--grn)" : "var(--red)";
+});
+
 function nextNo() {
   const day = ymd(new Date());
   const pre = "PS-" + day.replace(/-/g, "") + "-";
@@ -539,7 +603,10 @@ setInterval(() => {
 
 function resetKasir() {
   $("#vt").value = "";
+  $("#vname").value = "";
   $("#plat").value = "";
+  $("#wa").value = "";
+  $("#wa").style.borderColor = "";
   $("#op").value = "";
   $("#amt").value = "";
   $("#note").value = "";
@@ -554,16 +621,21 @@ async function save(print) {
   const vt = $("#vt").value;
   const op = $("#op").value;
   const amt = parseNum($("#amt").value);
+  const waRaw = $("#wa").value.trim();
+
   if (!vt) return toast("Pilih jenis kendaraan dulu.", "err");
   if (!op) return toast("Pilih nama operator dulu.", "err");
   if (!(amt > 0)) return toast("Total pembelian harus lebih dari 0.", "err");
+  if (waRaw && !isValidWA(waRaw)) return toast("Nomor WhatsApp tidak valid.", "err");
 
   nextNo();
   const now = new Date();
   const data = {
     receiptNumber: $("#rn").value,
     vehicleType: vt,
+    vehicleName: $("#vname").value.trim(),
     licensePlate: $("#plat").value.trim().toUpperCase(),
+    whatsapp: waRaw ? normalizeWA(waRaw) : "",
     operatorName: op,
     paymentType: $("#pay").value,
     amount: amt,
@@ -577,7 +649,16 @@ async function save(print) {
   try {
     await addDoc(collection(db, "transactions"), {...data, timestamp: serverTimestamp()});
     toast("Transaksi tersimpan ✔", "ok");
-    if (print) showStruk(data, now);
+
+    // Auto buka WhatsApp kalau dicentang & nomor ada
+    const shouldWA = $("#autowa").checked && data.whatsapp;
+    if (print) showStruk(data, now, shouldWA);
+
+    // Kirim WhatsApp (harus dalam user gesture yang sama agar popup tidak diblokir)
+    if (shouldWA) {
+      setTimeout(() => openWhatsApp(data, now, true), print ? 350 : 0);
+    }
+
     resetKasir();
   } catch (e) {
     err(e);
@@ -595,8 +676,13 @@ document.addEventListener("keydown", e => {
   if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); save(true); }
 });
 
-function showStruk(d, t) {
+/* ---------- Tampilkan Struk ---------- */
+let _lastStruk = null; // simpan data untuk tombol WA di modal
+
+function showStruk(d, t, showWABtn) {
+  _lastStruk = {data: d, time: t};
   const r = (a, b) => `<div class="r"><span>${esc(a)}</span><span>${esc(b)}</span></div>`;
+  const vname = d.vehicleName ? ` (${esc(d.vehicleName)})` : "";
   $("#struk").innerHTML = `
     <h4>${esc(S.gen.businessName)}</h4>
     <p class="c">${esc(S.gen.address)}</p>
@@ -604,7 +690,7 @@ function showStruk(d, t) {
     ${r("No", d.receiptNumber)}
     ${r("Tgl", fdt(t))}
     <hr>
-    ${r("Kendaraan", d.vehicleType)}
+    ${r("Kendaraan", d.vehicleType + vname)}
     ${r("Plat", d.licensePlate || "-")}
     ${r("Operator", d.operatorName)}
     ${r("Bayar", d.paymentType)}
@@ -612,6 +698,7 @@ function showStruk(d, t) {
     <div class="r"><b>TOTAL</b><b>${rp(d.amount)}</b></div>
     <hr>
     <p class="c">${esc(S.gen.receiptFooter)}</p>`;
+  $("#pwa").style.display = (showWABtn && d.whatsapp) ? "" : "none";
   $("#modal").classList.add("on");
   setTimeout(() => $("#pr").focus(), 50);
 }
@@ -621,6 +708,77 @@ $("#modal").addEventListener("click", e => { if (e.target.id === "modal") $("#mo
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && $("#modal").classList.contains("on")) $("#modal").classList.remove("on");
 });
+
+$("#pwa").onclick = () => {
+  if (_lastStruk) openWhatsApp(_lastStruk.data, _lastStruk.time, false);
+};
+
+/* ---------- WhatsApp Sender ---------- */
+/**
+ * Buat teks struk untuk WhatsApp (menggunakan format WA: *bold*)
+ */
+function buildWAText(d, t) {
+  const line = "━━━━━━━━━━━━━━━━";
+  const vname = d.vehicleName ? ` (${d.vehicleName})` : "";
+  return [
+    `*${S.gen.businessName.toUpperCase()}*`,
+    S.gen.address,
+    line,
+    `No. Struk : *${d.receiptNumber}*`,
+    `Tanggal   : ${fdt(t)}`,
+    `Kendaraan : ${d.vehicleType}${vname}`,
+    `Plat      : ${d.licensePlate || "-"}`,
+    `Operator  : ${d.operatorName}`,
+    `Bayar     : ${d.paymentType}`,
+    line,
+    `*TOTAL : ${rp(d.amount)}*`,
+    line,
+    d.notes ? `Catatan: ${d.notes}` : "",
+    S.gen.receiptFooter,
+    "",
+    "_Struk ini dikirim otomatis oleh sistem Parhuta Steam._"
+  ].filter(Boolean).join("\n");
+}
+
+/**
+ * Kirim struk via WhatsApp.
+ * @param {object} d  data transaksi
+ * @param {Date}   t  waktu
+ * @param {boolean} silent  kalau true, tidak tampilkan toast sukses
+ */
+async function openWhatsApp(d, t, silent) {
+  if (!d.whatsapp) return toast("Nomor WhatsApp customer belum diisi.", "err");
+  const phone = normalizeWA(d.whatsapp);
+  if (!isValidWA(phone)) return toast("Nomor WhatsApp tidak valid.", "err");
+  const text = buildWAText(d, t);
+
+  // === Mode Gateway API (opsional) ===
+  if (WA_GATEWAY.provider && WA_GATEWAY.token && WA_GATEWAY.endpoint) {
+    try {
+      const res = await fetch(WA_GATEWAY.endpoint, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": WA_GATEWAY.token
+        },
+        body: JSON.stringify({target: phone, message: text})
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      if (!silent) toast("Struk terkirim ke WhatsApp customer ✔", "ok");
+      return;
+    } catch (e) {
+      console.error("WA Gateway gagal:", e);
+      toast("Gateway WA gagal, membuka WhatsApp Web…", "err");
+      // fallthrough ke click-to-chat
+    }
+  }
+
+  // === Mode Click-to-Chat (default) ===
+  const url = `https://wa.me/${phone}?text=${encodeURIComponent(text)}`;
+  const w = window.open(url, "_blank", "noopener");
+  if (!w && !silent) toast("Popup diblokir. Izinkan popup untuk kirim WA otomatis.", "err");
+  else if (!silent) toast("WhatsApp dibuka — tekan kirim untuk mengirim struk 📲", "ok");
+}
 
 /* ---------- Filter tanggal ---------- */
 $("#from").value = $("#to").value = ymd(new Date());
@@ -680,24 +838,29 @@ function renderAdmin() {
 
   // Tabel pemasukan
   $("#tin").innerHTML = tbl(
-    ["No. Struk", "Tanggal", "Kategori", "Operator", "Pembayaran", "Jumlah", "Aksi"],
+    ["No. Struk","Tanggal","Kendaraan","Plat","Operator","Bayar","WA","Jumlah","Aksi"],
     tx.map(t => [
       esc(t.receiptNumber),
       fdt(tsd(t)),
-      esc(t.vehicleType),
+      esc(t.vehicleType) + (t.vehicleName ? ` <span style="opacity:.7">(${esc(t.vehicleName)})</span>` : ""),
+      esc(t.licensePlate || "-"),
       esc(t.operatorName),
       esc(t.paymentType),
+      t.whatsapp
+        ? `<a href="https://wa.me/${normalizeWA(t.whatsapp)}" target="_blank" rel="noopener" style="color:var(--wa);text-decoration:none">${esc(t.whatsapp)}</a>`
+        : `<span style="opacity:.4">-</span>`,
       rp(t.amount),
       `<button class="icon-btn" data-act="print" data-id="${t.id}">Cetak</button>
+       ${t.whatsapp ? `<button class="icon-btn wa" data-act="wa" data-id="${t.id}">WA</button>` : ""}
        <button class="icon-btn del" data-act="del-tx" data-id="${t.id}">Hapus</button>`
     ]),
-    [5],
-    ["", "", "", "", "TOTAL", rp(inc), ""]
+    [7],
+    ["","","","","","","","TOTAL", rp(inc)]
   );
 
   // Tabel pengeluaran
   $("#tex").innerHTML = tbl(
-    ["Tanggal", "Keterangan", "Kategori", "Jumlah", "Aksi"],
+    ["Tanggal","Keterangan","Kategori","Jumlah","Aksi"],
     ex.map(e => [
       ymd(tsd(e)),
       esc(e.description),
@@ -706,7 +869,7 @@ function renderAdmin() {
       `<button class="icon-btn del" data-act="del-ex" data-id="${e.id}">Hapus</button>`
     ]),
     [3],
-    ["", "", "TOTAL", rp(out), ""]
+    ["","","TOTAL", rp(out),""]
   );
 
   // Komisi
@@ -729,7 +892,7 @@ function renderAdmin() {
   $("#tkom").innerHTML = tbl(
     ["Operator", ...VK.map(k => V[k]), "Total Kendaraan", "Total Pendapatan", "Komisi"],
     komRows,
-    [1, 2, 3, 4, 5, 6, 7],
+    [1,2,3,4,5,6,7],
     komRows.length
       ? ["TOTAL", ...VK.map(k => komTotal.c[k] || 0), komTotal.n, rp(komTotal.r), rp(komTotal.k)]
       : null
@@ -761,14 +924,17 @@ function renderAdmin() {
   );
 }
 
-/* ---------- Aksi pada tabel (event delegation) ---------- */
+/* ---------- Aksi pada tabel ---------- */
 document.addEventListener("click", async e => {
   const btn = e.target.closest("button[data-act]");
   if (!btn) return;
   const {act, id} = btn.dataset;
   if (act === "print") {
     const t = S.tx.find(x => x.id === id);
-    if (t) showStruk(t, tsd(t));
+    if (t) showStruk(t, tsd(t), true);
+  } else if (act === "wa") {
+    const t = S.tx.find(x => x.id === id);
+    if (t) openWhatsApp(t, tsd(t), false);
   } else if (act === "del-tx") {
     const t = S.tx.find(x => x.id === id);
     if (!t) return;
@@ -818,7 +984,9 @@ $("#xl").onclick = () => {
     "No. Struk": t.receiptNumber,
     "Tanggal": fdt(tsd(t)),
     "Kategori": t.vehicleType,
+    "Nama Kendaraan": t.vehicleName || "",
     "Plat Nomor": t.licensePlate || "",
+    "WhatsApp": t.whatsapp || "",
     "Operator": t.operatorName,
     "Jenis Transaksi": t.paymentType,
     "Jumlah (Rp)": Number(t.amount) || 0,
@@ -831,7 +999,6 @@ $("#xl").onclick = () => {
     "Jumlah (Rp)": Number(e.amount) || 0
   }));
 
-  // Tambahkan total di akhir sheet
   const totalIn = tx.reduce((a, r) => a + r["Jumlah (Rp)"], 0);
   const totalOut = ex.reduce((a, r) => a + r["Jumlah (Rp)"], 0);
   if (tx.length) tx.push({"No. Struk": "TOTAL", "Jumlah (Rp)": totalIn});
@@ -840,9 +1007,8 @@ $("#xl").onclick = () => {
   const wb = XLSX.utils.book_new();
   const wsIn = XLSX.utils.json_to_sheet(tx);
   const wsEx = XLSX.utils.json_to_sheet(ex);
-  // Set column widths
-  wsIn["!cols"] = [{wch: 18},{wch: 22},{wch: 14},{wch: 14},{wch: 14},{wch: 14},{wch: 14},{wch: 20}];
-  wsEx["!cols"] = [{wch: 14},{wch: 28},{wch: 20},{wch: 14}];
+  wsIn["!cols"] = [{wch:18},{wch:22},{wch:14},{wch:18},{wch:14},{wch:16},{wch:14},{wch:14},{wch:14},{wch:20}];
+  wsEx["!cols"] = [{wch:14},{wch:28},{wch:20},{wch:14}];
   XLSX.utils.book_append_sheet(wb, wsIn, "Pemasukan");
   XLSX.utils.book_append_sheet(wb, wsEx, "Pengeluaran");
   XLSX.writeFile(wb, `Parhuta-Steam_${$("#from").value}_${$("#to").value}.xlsx`);
@@ -861,7 +1027,6 @@ function fillSet() {
       <input type="number" data-c="${k}" value="${(S.price[k].commission * 100).toFixed(2).replace(/\.00$/, "")}" min="0" max="100" step="0.5">
     </div>`).join("");
 
-  // Jangan timpa input yang sedang aktif
   if (document.activeElement.id !== "gn") $("#gn").value = S.gen.businessName;
   if (document.activeElement.id !== "ga") $("#ga").value = S.gen.address;
   if (document.activeElement.id !== "gf") $("#gf").value = S.gen.receiptFooter;
@@ -924,7 +1089,6 @@ document.addEventListener("click", async e => {
   }
 });
 
-// Enter di input tambah opsi
 ["operators","paymentTypes","expenseCategories"].forEach(k => {
   $("#in-" + k).addEventListener("keydown", e => {
     if (e.key === "Enter") e.target.parentElement.querySelector("button[data-add]").click();
