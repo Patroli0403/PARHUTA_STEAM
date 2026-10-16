@@ -691,7 +691,7 @@ function toast(msg, type="") {
   t._h = setTimeout(() => t.style.display = "none", 2600);
 }
 
-const V = {motorKecil:"Motor Kecil", motorBesar:"Motor Besar", mobilKecil:"Mobil Kecil", mobilBesar:"Mobil Besar"};
+const V = {motorKecil:"Motor Kecil", motorBesar:"Motor Besar", motorSport:"Motor Sport", mobilKecil:"Mobil Kecil", mobilBesar:"Mobil Besar"};
 const VK = Object.keys(V);
 const VN = Object.fromEntries(VK.map(k => [V[k], k]));
 
@@ -700,6 +700,7 @@ const S = {
   price: {
     motorKecil: {rate:15000, commission:.4},
     motorBesar: {rate:20000, commission:.4},
+    motorSport: {rate:25000, commission:.4},
     mobilKecil: {rate:35000, commission:.4},
     mobilBesar: {rate:45000, commission:.4}
   },
