@@ -379,6 +379,41 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
   #p-stat .chart-card{padding:14px}
   #p-stat .stat-grid{grid-template-columns:1fr}
 }
+/* --- CSS UNTUK MULTI-OPERATOR --- */
+.op-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 6px;
+}
+.op-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #0d1626;
+  border: 1px solid var(--line);
+  padding: 12px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: .15s;
+  user-select: none;
+}
+.op-item input {
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--a);
+}
+.op-item:has(input:checked) {
+  border-color: var(--a);
+  background: #1a2f4c;
+  color: #fff;
+}
 </style>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#1E90FF">
@@ -433,7 +468,10 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
         <input id="wa" placeholder="08123456789" inputmode="tel" maxlength="20" autocomplete="off">
         <span class="hint">Format: 08xx atau 628xx. Untuk kirim struk otomatis.</span>
       </div>
-      <div><label>Nama Operator</label><select id="op"></select></div>
+      <div style="grid-column: 1 / -1;">
+        <label>Nama Operator <span class="opt">(bisa pilih lebih dari 1)</span></label>
+        <div id="op-list" class="op-list"></div>
+      </div>
       <div><label>Jenis Pembayaran</label><select id="pay"></select></div>
       <div>
         <label>Total Pembelian (Rp)</label>
@@ -713,6 +751,12 @@ const S = {
 };
 
 const tsd = o => o?.timestamp?.toDate ? o.timestamp.toDate() : new Date();
+// Fungsi untuk mengambil array operator (mendukung data lama & baru)
+function getOps(t) {
+  if (Array.isArray(t.operatorNames)) return t.operatorNames;
+  if (t.operatorName) return [t.operatorName];
+  return ["Tanpa Operator"];
+}
 const inR = a => a.filter(o => {
   const d = ymd(tsd(o));
   return d >= $("#from").value && d <= $("#to").value;
@@ -833,7 +877,15 @@ function fillKasir() {
   $("#vt").innerHTML = `<option value="">-- Pilih --</option>` +
     VK.map(k => `<option value="${V[k]}">${V[k]} (${rp(S.price[k]?.rate || 0)})</option>`).join("");
   $("#vt").value = v;
-  fillSel($("#op"), S.opt.operators, "-- Pilih --");
+  
+  // Render Checkbox Operator
+  $("#op-list").innerHTML = S.opt.operators.map(op => `
+    <label class="op-item">
+      <input type="checkbox" value="${esc(op)}" name="op-check">
+      <span>${esc(op)}</span>
+    </label>
+  `).join("");
+  
   fillSel($("#pay"), S.opt.paymentTypes);
 }
 
@@ -880,7 +932,7 @@ function resetKasir() {
   $("#plat").value = "";
   $("#wa").value = "";
   $("#wa").style.borderColor = "";
-  $("#op").value = "";
+  document.querySelectorAll('input[name="op-check"]').forEach(cb => cb.checked = false);
   $("#amt").value = "";
   $("#note").value = "";
   if ($("#pay").options.length) $("#pay").selectedIndex = 0;
@@ -892,12 +944,18 @@ $("#sc").onclick = resetKasir;
 
 async function save(print) {
   const vt = $("#vt").value;
-  const op = $("#op").value;
+  
+  // Ambil semua operator yang dicentang (karena sekarang pakai checkbox)
+  const selectedOps = [...document.querySelectorAll('input[name="op-check"]:checked')].map(cb => cb.value);
+  
   const amt = parseNum($("#amt").value);
   const waRaw = $("#wa").value.trim();
 
   if (!vt) return toast("Pilih jenis kendaraan dulu.", "err");
-  if (!op) return toast("Pilih nama operator dulu.", "err");
+  
+  // Validasi cek apakah tidak ada operator yang dipilih
+  if (selectedOps.length === 0) return toast("Pilih minimal 1 operator.", "err");
+  
   if (!(amt > 0)) return toast("Total pembelian harus lebih dari 0.", "err");
   if (waRaw && !isValidWA(waRaw)) return toast("Nomor WhatsApp tidak valid.", "err");
 
@@ -909,7 +967,7 @@ async function save(print) {
     vehicleName: $("#vname").value.trim(),
     licensePlate: $("#plat").value.trim().toUpperCase(),
     whatsapp: waRaw ? normalizeWA(waRaw) : "",
-    operatorName: op,
+    operatorNames: selectedOps, // <--- Ubah 'operatorName' jadi 'operatorNames' (pakai s)
     paymentType: $("#pay").value,
     amount: amt,
     notes: $("#note").value.trim()
@@ -962,7 +1020,7 @@ function showStruk(d, t, showWABtn) {
     <hr>
     ${r("Kendaraan", d.vehicleType + vname)}
     ${r("Plat", d.licensePlate || "-")}
-    ${r("Operator", d.operatorName)}
+    ${r("Operator", getOps(d).join(", "))}  // di showStruk
     ${r("Bayar", d.paymentType)}
     <hr>
     <div class="r"><b>TOTAL</b><b>${rp(d.amount)}</b></div>
@@ -995,7 +1053,7 @@ function buildWAText(d, t) {
     `Tanggal   : ${fdt(t)}`,
     `Kendaraan : ${d.vehicleType}${vname}`,
     `Plat      : ${d.licensePlate || "-"}`,
-    `Operator  : ${d.operatorName}`,
+    `Operator  : ${getOps(d).join(", ")}`, // di buildWAText
     `Bayar     : ${d.paymentType}`,
     line,
     `*TOTAL : ${rp(d.amount)}*`,
@@ -1101,7 +1159,7 @@ function renderAdmin() {
       fdt(tsd(t)),
       esc(t.vehicleType) + (t.vehicleName ? ` <span style="opacity:.7">(${esc(t.vehicleName)})</span>` : ""),
       esc(t.licensePlate || "-"),
-      esc(t.operatorName),
+      esc(getOps(t).join(", ")),
       esc(t.paymentType),
       t.whatsapp
         ? `<a href="https://wa.me/${normalizeWA(t.whatsapp)}" target="_blank" rel="noopener" style="color:var(--wa);text-decoration:none">${esc(t.whatsapp)}</a>`
@@ -1128,28 +1186,42 @@ function renderAdmin() {
     ["","","TOTAL", rp(out),""]
   );
 
-  const m = {};
+    const m = {};
   tx.forEach(t => {
-    const o = m[t.operatorName] ??= {c: Object.fromEntries(VK.map(k => [k, 0])), n: 0, r: 0, k: 0};
+    const ops = getOps(t);
+    const totalComm = comm(t);
     const k = VN[t.vehicleType];
-    if (k) o.c[k]++;
-    o.n++;
-    o.r += Number(t.amount) || 0;
-    o.k += comm(t);
+    
+    // Bagi pendapatan & komisi secara rata
+    const shareAmount = (Number(t.amount) || 0) / ops.length;
+    const shareComm = totalComm / ops.length;
+    const shareCount = 1 / ops.length;
+
+    ops.forEach(opName => {
+      const o = m[opName] ??= {c: Object.fromEntries(VK.map(k => [k, 0])), n: 0, r: 0, k: 0};
+      if (k) o.c[k] += shareCount;
+      o.n += shareCount;
+      o.r += shareAmount;
+      o.k += shareComm;
+    });
   });
+
+  const formatC = (n) => Number.isInteger(n) ? n : n.toFixed(1);
   const komRows = Object.entries(m).sort((a, b) => b[1].k - a[1].k)
-    .map(([n, o]) => [esc(n), ...VK.map(k => o.c[k]), o.n, rp(o.r), rp(o.k)]);
+    .map(([n, o]) => [esc(n), ...VK.map(k => formatC(o.c[k])), formatC(o.n), rp(o.r), rp(o.k)]);
+    
   const komTotal = Object.values(m).reduce((a, o) => {
     a.n += o.n; a.r += o.r; a.k += o.k;
     VK.forEach(k => a.c[k] = (a.c[k] || 0) + o.c[k]);
     return a;
   }, {c: {}, n: 0, r: 0, k: 0});
+  
   $("#tkom").innerHTML = tbl(
     ["Operator", ...VK.map(k => V[k]), "Total Kendaraan", "Total Pendapatan", "Komisi"],
     komRows,
     [1,2,3,4,5,6,7],
     komRows.length
-      ? ["TOTAL", ...VK.map(k => komTotal.c[k] || 0), komTotal.n, rp(komTotal.r), rp(komTotal.k)]
+      ? ["TOTAL", ...VK.map(k => formatC(komTotal.c[k] || 0)), formatC(komTotal.n), rp(komTotal.r), rp(komTotal.k)]
       : null
   );
 
@@ -1243,7 +1315,7 @@ $("#xl").onclick = () => {
     "Nama Kendaraan": t.vehicleName || "",
     "Plat Nomor": t.licensePlate || "",
     "WhatsApp": t.whatsapp || "",
-    "Operator": getOps(t).join(", "), // <--- Digabung dengan koma
+    "Operator": getOps(t).join(", "),
     "Jenis Transaksi": t.paymentType,
     "Jumlah (Rp)": Number(t.amount) || 0,
     "Catatan": t.notes || ""
