@@ -1233,7 +1233,9 @@ $("#eb").onclick = async () => {
 };
 
 /* ---------- Excel Export ---------- */
+/* ---------- Excel Export ---------- */
 $("#xl").onclick = () => {
+  // 1. Data Transaksi (Tetap 1 baris per transaksi, tidak dobel)
   const tx = inR(S.tx).map(t => ({
     "No. Struk": t.receiptNumber,
     "Tanggal": fdt(tsd(t)),
@@ -1241,11 +1243,13 @@ $("#xl").onclick = () => {
     "Nama Kendaraan": t.vehicleName || "",
     "Plat Nomor": t.licensePlate || "",
     "WhatsApp": t.whatsapp || "",
-    "Operator": t.operatorName,
+    "Operator": getOps(t).join(", "), // <--- Digabung dengan koma
     "Jenis Transaksi": t.paymentType,
     "Jumlah (Rp)": Number(t.amount) || 0,
     "Catatan": t.notes || ""
   }));
+
+  // 2. Data Pengeluaran
   const ex = inR(S.ex).map(e => ({
     "Tanggal": ymd(tsd(e)),
     "Keterangan": e.description,
@@ -1253,18 +1257,57 @@ $("#xl").onclick = () => {
     "Jumlah (Rp)": Number(e.amount) || 0
   }));
 
-  const totalIn = tx.reduce((a, r) => a + r["Jumlah (Rp)"], 0);
-  const totalOut = ex.reduce((a, r) => a + r["Jumlah (Rp)"], 0);
-  if (tx.length) tx.push({"No. Struk": "TOTAL", "Jumlah (Rp)": totalIn});
-  if (ex.length) ex.push({"Tanggal": "", "Keterangan": "TOTAL", "Jumlah (Rp)": totalOut});
+  // 3. Data Komisi Operator (Pembagian Adil)
+  const komData = {};
+  inR(S.tx).forEach(t => {
+    const ops = getOps(t);
+    const amt = Number(t.amount) || 0;
+    const kom = comm(t);
+    
+    // Bagi rata pendapatan dan komisi ke setiap operator
+    const shareAmt = amt / ops.length;
+    const shareKom = kom / ops.length;
+    const shareCount = 1 / ops.length;
 
+    ops.forEach(opName => {
+      const o = komData[opName] ??= { count: 0, rev: 0, comm: 0 };
+      o.count += shareCount;
+      o.rev += shareAmt;
+      o.comm += shareKom;
+    });
+  });
+
+  const komRows = Object.entries(komData).map(([name, data]) => ({
+    "Nama Operator": name,
+    "Total Kendaraan": Number.isInteger(data.count) ? data.count : data.count.toFixed(1),
+    "Total Pendapatan (Rp)": Math.round(data.rev),
+    "Komisi (Rp)": Math.round(data.comm)
+  }));
+
+  // --- Pembuatan File Excel ---
   const wb = XLSX.utils.book_new();
+  
+  // Sheet 1: Pemasukan
+  const totalIn = tx.reduce((a, r) => a + r["Jumlah (Rp)"], 0);
+  if (tx.length) tx.push({"No. Struk": "TOTAL", "Jumlah (Rp)": totalIn});
   const wsIn = XLSX.utils.json_to_sheet(tx);
-  const wsEx = XLSX.utils.json_to_sheet(ex);
-  wsIn["!cols"] = [{wch:18},{wch:22},{wch:14},{wch:18},{wch:14},{wch:16},{wch:14},{wch:14},{wch:14},{wch:20}];
-  wsEx["!cols"] = [{wch:14},{wch:28},{wch:20},{wch:14}];
+  wsIn["!cols"] = [{wch:18},{wch:22},{wch:14},{wch:18},{wch:14},{wch:16},{wch:20},{wch:14},{wch:14},{wch:20}];
   XLSX.utils.book_append_sheet(wb, wsIn, "Pemasukan");
+
+  // Sheet 2: Pengeluaran
+  const totalOut = ex.reduce((a, r) => a + r["Jumlah (Rp)"], 0);
+  if (ex.length) ex.push({"Tanggal": "", "Keterangan": "TOTAL", "Jumlah (Rp)": totalOut});
+  const wsEx = XLSX.utils.json_to_sheet(ex);
+  wsEx["!cols"] = [{wch:14},{wch:28},{wch:20},{wch:14}];
   XLSX.utils.book_append_sheet(wb, wsEx, "Pengeluaran");
+
+  // Sheet 3: Komisi Operator
+  if (komRows.length) {
+    const wsKom = XLSX.utils.json_to_sheet(komRows);
+    wsKom["!cols"] = [{wch:20},{wch:16},{wch:22},{wch:18}];
+    XLSX.utils.book_append_sheet(wb, wsKom, "Komisi Operator");
+  }
+
   XLSX.writeFile(wb, `Parhuta-Steam_${$("#from").value}_${$("#to").value}.xlsx`);
   toast("File Excel diunduh", "ok");
 };
