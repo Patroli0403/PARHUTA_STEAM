@@ -670,6 +670,10 @@ import {
 initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, onSnapshot, addDoc, setDoc, deleteDoc, serverTimestamp, Timestamp, query, orderBy
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+  
+const CapFilesystem = window.Capacitor?.Plugins?.Filesystem;
+const CapShare = window.Capacitor?.Plugins?.Share;
+
 /* ============================================================
    KONFIGURASI FIREBASE
    ============================================================ */
@@ -1307,8 +1311,8 @@ $("#eb").onclick = async () => {
 
 /* ---------- Excel Export ---------- */
 /* ---------- Excel Export ---------- */
-$("#xl").onclick = () => {
-  // 1. Data Transaksi (Tetap 1 baris per transaksi, tidak dobel)
+$("#xl").onclick = async () => {
+  // 1. Ambil data Transaksi
   const tx = inR(S.tx).map(t => ({
     "No. Struk": t.receiptNumber,
     "Tanggal": fdt(tsd(t)),
@@ -1322,7 +1326,7 @@ $("#xl").onclick = () => {
     "Catatan": t.notes || ""
   }));
 
-  // 2. Data Pengeluaran
+  // 2. Ambil data Pengeluaran
   const ex = inR(S.ex).map(e => ({
     "Tanggal": ymd(tsd(e)),
     "Keterangan": e.description,
@@ -1330,14 +1334,12 @@ $("#xl").onclick = () => {
     "Jumlah (Rp)": Number(e.amount) || 0
   }));
 
-  // 3. Data Komisi Operator (Pembagian Adil)
+  // 3. Ambil data Komisi
   const komData = {};
   inR(S.tx).forEach(t => {
     const ops = getOps(t);
     const amt = Number(t.amount) || 0;
     const kom = comm(t);
-    
-    // Bagi rata pendapatan dan komisi ke setiap operator
     const shareAmt = amt / ops.length;
     const shareKom = kom / ops.length;
     const shareCount = 1 / ops.length;
@@ -1357,32 +1359,55 @@ $("#xl").onclick = () => {
     "Komisi (Rp)": Math.round(data.comm)
   }));
 
-  // --- Pembuatan File Excel ---
-  const wb = XLSX.utils.book_new();
-  
-  // Sheet 1: Pemasukan
-  const totalIn = tx.reduce((a, r) => a + r["Jumlah (Rp)"], 0);
-  if (tx.length) tx.push({"No. Struk": "TOTAL", "Jumlah (Rp)": totalIn});
-  const wsIn = XLSX.utils.json_to_sheet(tx);
-  wsIn["!cols"] = [{wch:18},{wch:22},{wch:14},{wch:18},{wch:14},{wch:16},{wch:20},{wch:14},{wch:14},{wch:20}];
-  XLSX.utils.book_append_sheet(wb, wsIn, "Pemasukan");
+  try {
+    // 4. Buat File Excel
+    const wb = XLSX.utils.book_new();
+    
+    const totalIn = tx.reduce((a, r) => a + r["Jumlah (Rp)"], 0);
+    if (tx.length) tx.push({"No. Struk": "TOTAL", "Jumlah (Rp)": totalIn});
+    const wsIn = XLSX.utils.json_to_sheet(tx);
+    wsIn["!cols"] = [{wch:18},{wch:22},{wch:14},{wch:18},{wch:14},{wch:16},{wch:20},{wch:14},{wch:14},{wch:20}];
+    XLSX.utils.book_append_sheet(wb, wsIn, "Pemasukan");
 
-  // Sheet 2: Pengeluaran
-  const totalOut = ex.reduce((a, r) => a + r["Jumlah (Rp)"], 0);
-  if (ex.length) ex.push({"Tanggal": "", "Keterangan": "TOTAL", "Jumlah (Rp)": totalOut});
-  const wsEx = XLSX.utils.json_to_sheet(ex);
-  wsEx["!cols"] = [{wch:14},{wch:28},{wch:20},{wch:14}];
-  XLSX.utils.book_append_sheet(wb, wsEx, "Pengeluaran");
+    const totalOut = ex.reduce((a, r) => a + r["Jumlah (Rp)"], 0);
+    if (ex.length) ex.push({"Tanggal": "", "Keterangan": "TOTAL", "Jumlah (Rp)": totalOut});
+    const wsEx = XLSX.utils.json_to_sheet(ex);
+    wsEx["!cols"] = [{wch:14},{wch:28},{wch:20},{wch:14}];
+    XLSX.utils.book_append_sheet(wb, wsEx, "Pengeluaran");
 
-  // Sheet 3: Komisi Operator
-  if (komRows.length) {
-    const wsKom = XLSX.utils.json_to_sheet(komRows);
-    wsKom["!cols"] = [{wch:20},{wch:16},{wch:22},{wch:18}];
-    XLSX.utils.book_append_sheet(wb, wsKom, "Komisi Operator");
+    if (komRows.length) {
+      const wsKom = XLSX.utils.json_to_sheet(komRows);
+      wsKom["!cols"] = [{wch:20},{wch:16},{wch:22},{wch:18}];
+      XLSX.utils.book_append_sheet(wb, wsKom, "Komisi Operator");
+    }
+
+    const fileName = `Parhuta-Steam_${$("#from").value}_${$("#to").value}.xlsx`;
+
+    // 5. PROSES SIMPAN FILE
+    if (CapFilesystem && CapShare) {
+      // Jika dibuka di HP (APK), simpan ke HP lalu munculkan menu Share
+      const base64Data = XLSX.write(wb, { bookType: "xlsx", type: "base64" });
+      const result = await CapFilesystem.writeFile({
+        path: fileName,
+        data: base64Data,
+        directory: "CACHE"
+      });
+      await CapShare.share({
+        title: "Laporan Parhuta Steam",
+        url: result.uri,
+        dialogTitle: "Simpan atau Bagikan Excel"
+      });
+      toast("File siap dibagikan ✔", "ok");
+    } else {
+      // Jika dibuka di Web Browser biasa, langsung download
+      XLSX.writeFile(wb, fileName);
+      toast("File Excel diunduh", "ok");
+    }
+
+  } catch (e) {
+    console.error("Gagal export Excel:", e);
+    toast("Gagal menyimpan: " + e.message, "err");
   }
-
-  XLSX.writeFile(wb, `Parhuta-Steam_${$("#from").value}_${$("#to").value}.xlsx`);
-  toast("File Excel diunduh", "ok");
 };
 
 /* ---------- Pengaturan ---------- */
