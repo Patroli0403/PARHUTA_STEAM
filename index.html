@@ -746,6 +746,15 @@ const ymd = d => {
 const fdt = d => d.toLocaleString("id-ID", {dateStyle:"medium", timeStyle:"short"});
 const fmtNum = n => (Number(n) || 0).toLocaleString("id-ID");
 const parseNum = s => Number(String(s).replace(/[^\d]/g, "")) || 0;
+const toLocalDT = d => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,"0");
+  const da = String(d.getDate()).padStart(2,"0");
+  const h = String(d.getHours()).padStart(2,"0");
+  const mi = String(d.getMinutes()).padStart(2,"0");
+  return `${y}-${m}-${da}T${h}:${mi}`;
+};
+let _dtTouched = false;
 
 function normalizeWA(input) {
   let s = String(input || "").replace(/[^\d+]/g, "").replace(/^\+/, "");
@@ -1118,7 +1127,7 @@ function showStruk(d, t, showWABtn) {
     <hr>
     ${r("Kendaraan", d.vehicleType + vname)}
     ${r("Plat", d.licensePlate || "-")}
-    ${r("Operator", getOps(d).join(", "))}  // di showStruk
+    ${r("Operator", getOps(d).join(", "))}
     ${r("Bayar", d.paymentType)}
     <hr>
     <div class="r"><b>TOTAL</b><b>${rp(d.amount)}</b></div>
