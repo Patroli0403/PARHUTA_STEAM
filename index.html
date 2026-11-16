@@ -324,6 +324,30 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
   }
 }
 
+
+/* Quick-back buttons untuk backdate */
+#p-kasir .quick-back {
+  display: flex;
+  gap: 6px;
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+#p-kasir .quick-back button {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  min-height: 0;
+  background: #0d1626;
+  border: 1px solid var(--line);
+  color: var(--t);
+  border-radius: 8px;
+}
+#p-kasir .quick-back button:hover {
+  background: var(--a);
+  border-color: var(--a);
+  color: #fff;
+}
+  
 /* ==================================================
    HALAMAN STATISTIK — Grafik & Charts
    ================================================== */
@@ -456,7 +480,17 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
     <h2>Transaksi Baru</h2>
     <div class="g">
       <div><label>Nomor Struk</label><input id="rn" disabled></div>
-      <div><label>Tanggal & Jam</label><input id="dt" disabled></div>
+<div>
+  <label>Tanggal & Jam Transaksi</label>
+  <input type="datetime-local" id="dt" step="60">
+  <span class="hint" id="dt-hint"></span>
+  <div class="quick-back">
+    <button type="button" data-back="0">Hari Ini</button>
+    <button type="button" data-back="1">Kemarin</button>
+    <button type="button" data-back="2">2 Hari Lalu</button>
+    <button type="button" data-back="7">Seminggu Lalu</button>
+  </div>
+</div>
       <div><label>Jenis Kendaraan</label><select id="vt"></select></div>
       <div>
         <label>Nama Kendaraan <span class="opt">(opsional)</span></label>
@@ -915,7 +949,9 @@ $("#wa").addEventListener("input", e => {
 });
 
 function nextNo() {
-  const day = ymd(new Date());
+  const dtVal = $("#dt").value;
+  const d = dtVal ? new Date(dtVal) : new Date();
+  const day = ymd(isNaN(d.getTime()) ? new Date() : d);
   const pre = "PS-" + day.replace(/-/g, "") + "-";
   const mx = Math.max(0, ...S.tx
     .filter(t => (t.receiptNumber || "").startsWith(pre))
@@ -923,15 +959,41 @@ function nextNo() {
   $("#rn").value = pre + String(mx + 1).padStart(4, "0");
 }
 
+function updateDtHint() {
+  const hint = $("#dt-hint");
+  if (!hint) return;
+  const v = $("#dt").value;
+  if (!v) { hint.textContent = ""; hint.style.color = ""; return; }
+  const d = new Date(v);
+  if (isNaN(d.getTime())) { hint.textContent = "Tanggal tidak valid."; hint.style.color = "var(--red)"; return; }
+  const isToday = ymd(d) === ymd(new Date());
+  if (isToday) {
+    hint.textContent = "Transaksi akan dicatat dengan waktu saat ini.";
+    hint.style.color = "";
+  } else {
+    const diffDays = Math.round(
+      (new Date(ymd(new Date())+"T00:00:00") - new Date(ymd(d)+"T00:00:00")) / 86400000
+    );
+    hint.textContent = `⚠ Backdate: transaksi akan dicatat pada ${fdt(d)}${diffDays > 0 ? ` (${diffDays} hari lalu)` : ""}.`;
+    hint.style.color = "var(--grn)";
+  }
+}
+
 function tick() {
-  $("#dt").value = fdt(new Date());
+  if (!_dtTouched) {
+    $("#dt").value = toLocalDT(new Date());
+  }
   nextNo();
+  updateDtHint();
 }
 setInterval(() => {
-  if ($("#p-kasir").classList.contains("on")) $("#dt").value = fdt(new Date());
+  if ($("#p-kasir").classList.contains("on") && !_dtTouched) {
+    $("#dt").value = toLocalDT(new Date());
+    nextNo();
+  }
 }, 30000);
 
-function resetKasir() {
+function resetKasir(keepDate = false) {
   $("#vt").value = "";
   $("#vname").value = "";
   $("#plat").value = "";
@@ -941,12 +1003,37 @@ function resetKasir() {
   $("#amt").value = "";
   $("#note").value = "";
   if ($("#pay").options.length) $("#pay").selectedIndex = 0;
-  tick();
+  if (!keepDate) {
+    _dtTouched = false;
+    $("#dt").value = toLocalDT(new Date());
+  }
+  nextNo();
+  updateDtHint();
   $("#vt").focus();
 }
 
-$("#sc").onclick = resetKasir;
+$("#sc").onclick = () => resetKasir(false);
 
+// Listener perubahan tanggal manual
+$("#dt").addEventListener("input", () => {
+  _dtTouched = true;
+  nextNo();
+  updateDtHint();
+});
+
+// Quick-back buttons
+document.querySelectorAll("#p-kasir [data-back]").forEach(b => {
+  b.addEventListener("click", () => {
+    const days = parseInt(b.dataset.back) || 0;
+    const d = new Date();
+    d.setDate(d.getDate() - days);
+    $("#dt").value = toLocalDT(d);
+    _dtTouched = days > 0; // "Hari Ini" kembali ke mode auto
+    nextNo();
+    updateDtHint();
+  });
+});
+  
 async function save(print) {
   const vt = $("#vt").value;
   
@@ -964,10 +1051,15 @@ async function save(print) {
   if (!(amt > 0)) return toast("Total pembelian harus lebih dari 0.", "err");
   if (waRaw && !isValidWA(waRaw)) return toast("Nomor WhatsApp tidak valid.", "err");
 
-  nextNo();
-  const now = new Date();
-  const data = {
-    receiptNumber: $("#rn").value,
+  // Validasi tanggal transaksi
+const dtVal = $("#dt").value;
+if (!dtVal) return toast("Tanggal transaksi tidak valid.", "err");
+const now = new Date(dtVal);
+if (isNaN(now.getTime())) return toast("Tanggal transaksi tidak valid.", "err");
+
+nextNo();
+const data = {
+  receiptNumber: $("#rn").value,
     vehicleType: vt,
     vehicleName: $("#vname").value.trim(),
     licensePlate: $("#plat").value.trim().toUpperCase(),
@@ -983,8 +1075,9 @@ async function save(print) {
   btnP.textContent = "Menyimpan…";
 
   try {
-    await addDoc(collection(db, "transactions"), {...data, timestamp: serverTimestamp()});
-    toast("Transaksi tersimpan ✔", "ok");
+    await addDoc(collection(db, "transactions"), {...data, timestamp: Timestamp.fromDate(now)});
+const isBackdate = ymd(now) !== ymd(new Date());
+toast(`Transaksi tersimpan ✔${isBackdate ? ` (backdate ${fdt(now)})` : ""}`, "ok");
 
     const shouldWA = $("#autowa").checked && data.whatsapp;
     if (print) showStruk(data, now, shouldWA);
@@ -993,7 +1086,7 @@ async function save(print) {
       setTimeout(() => openWhatsApp(data, now, true), print ? 350 : 0);
     }
 
-    resetKasir();
+    resetKasir(true); // pertahankan tanggal agar bisa entry beberapa transaksi backdate sekaligus
   } catch (e) {
     err(e);
   } finally {
@@ -1804,6 +1897,7 @@ function renderStatistik() {
 fillKasir();
 fillExp();
 fillSet();
+$("#dt").value = toLocalDT(new Date());
 route();
 $("#vt").focus();
 </script>
