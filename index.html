@@ -285,7 +285,6 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
         <span class="hint">Format: 08xx atau 628xx. Untuk kirim struk otomatis.</span>
       </div>
       
-      <!-- BLOK OPERATOR (SUDAH DIPERBAIKI) -->
       <div style="grid-column: 1 / -1;">
         <label>Nama Operator <span class="opt">(bisa pilih lebih dari 1)</span></label>
         <div id="op-list" class="op-list"></div>
@@ -413,7 +412,7 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
       <button data-add="expenseCategories">Tambah</button>
     </div>
 
-    <!-- SETTING JAJANAN (DIPERBAIKI MASUK KE DALAM CARD) -->
+    <!-- SETTING JAJANAN -->
     <h3>Menu Jajanan</h3>
     <div class="row" style="margin-top:4px">
       <input id="in-snack-name" placeholder="Nama Jajanan (cth: Pop Mie)" style="max-width:200px">
@@ -889,13 +888,18 @@ async function save(print) {
   const now = new Date(dtVal);
   if (isNaN(now.getTime())) return toast("Tanggal transaksi tidak valid.", "err");
 
+  let snackTotal = 0;
   const extras = [];
   document.querySelectorAll(".snack-qty").forEach(inp => {
     const qty = parseInt(inp.value) || 0;
     if (qty > 0) {
-      extras.push({ name: inp.dataset.name, price: parseInt(inp.dataset.price) || 0, qty: qty });
+      const price = parseInt(inp.dataset.price) || 0;
+      snackTotal += (price * qty);
+      extras.push({ name: inp.dataset.name, price: price, qty: qty });
     }
   });
+
+  const vehicleAmount = amt - snackTotal; // Pisahkan pendapatan jasa cuci
 
   nextNo();
   const data = {
@@ -907,6 +911,8 @@ async function save(print) {
     operatorNames: selectedOps,
     paymentType: $("#pay").value,
     amount: amt,
+    vehicleAmount: vehicleAmount, // <-- Disimpan untuk hitung komisi
+    snackAmount: snackTotal,      // <-- Disimpan untuk laporan
     notes: $("#note").value.trim(),
     extras: extras
   };
@@ -1072,9 +1078,15 @@ const tbl = (h, rows, num = [], foot = null) => `
     ${foot ? `<tfoot><tr>${foot.map((c, i) => `<td class="${num.includes(i) ? "n" : ""}">${c}</td>`).join("")}</tr></tfoot>` : ""}
   </table>`;
 
+// PERBAIKAN: Komisi HANYA dihitung dari pendapatan jasa (bukan jajanan)
 const comm = t => {
   const k = VN[t.vehicleType];
-  return (Number(t.amount) || 0) * (S.price[k]?.commission ?? 0);
+  const rate = S.price[k]?.commission ?? 0;
+  // Jika data lama belum ada vehicleAmount, kita kurangi total dengan total jajanan
+  const baseAmount = t.vehicleAmount !== undefined 
+    ? t.vehicleAmount 
+    : (Number(t.amount) || 0) - (t.extras?.reduce((sum, item) => sum + (item.price * item.qty), 0) || 0);
+  return baseAmount * rate;
 };
 
 function renderAdmin() {
@@ -1095,23 +1107,32 @@ function renderAdmin() {
     ["Laba Bersih", rp(net), net >= 0 ? "hi" : "lo"]
   ].map(([a, b, cls]) => `<div class="stat ${cls}"><small>${a}</small><div>${b}</div></div>`).join("");
 
+  // PERBAIKAN TABEL PEMASUKAN: Pisahkan Jasa Cuci dan Jajanan
+  let totVehicle = 0;
+  let totSnack = 0;
+  
   $("#tin").innerHTML = tbl(
-    ["No. Struk","Tanggal","Kendaraan","Plat","Operator","Bayar","WA","Jumlah","Aksi"],
-    tx.map(t => [
-      esc(t.receiptNumber),
-      fdt(tsd(t)),
-      esc(t.vehicleType) + (t.vehicleName ? ` <span style="opacity:.7">(${esc(t.vehicleName)})</span>` : ""),
-      esc(t.licensePlate || "-"),
-      esc(getOps(t).join(", ")),
-      esc(t.paymentType),
-      t.whatsapp ? `<a href="https://wa.me/${normalizeWA(t.whatsapp)}" target="_blank" rel="noopener" style="color:var(--wa);text-decoration:none">${esc(t.whatsapp)}</a>` : `<span style="opacity:.4">-</span>`,
-      rp(t.amount),
-      `<button class="icon-btn" data-act="print" data-id="${t.id}">Cetak</button>
-       ${t.whatsapp ? `<button class="icon-btn wa" data-act="wa" data-id="${t.id}">WA</button>` : ""}
-       <button class="icon-btn del" data-act="del-tx" data-id="${t.id}">Hapus</button>`
-    ]),
-    [7],
-    ["","","","","","","","TOTAL", rp(inc)]
+    ["No. Struk","Tanggal","Kendaraan","Operator","Jasa Cuci","Jajanan","Total","Aksi"],
+    tx.map(t => {
+      const sAmt = t.snackAmount !== undefined ? t.snackAmount : (t.extras?.reduce((s, x) => s + (x.price * x.qty), 0) || 0);
+      const vAmt = t.vehicleAmount !== undefined ? t.vehicleAmount : (t.amount - sAmt);
+      totVehicle += vAmt;
+      totSnack += sAmt;
+      
+      return [
+        esc(t.receiptNumber),
+        fdt(tsd(t)),
+        esc(t.vehicleType) + (t.vehicleName ? ` (${esc(t.vehicleName)})` : ""),
+        esc(getOps(t).join(", ")),
+        rp(vAmt),
+        sAmt > 0 ? rp(sAmt) : `<span style="opacity:.4">-</span>`,
+        rp(t.amount),
+        `<button class="icon-btn" data-act="print" data-id="${t.id}">Cetak</button>
+         <button class="icon-btn del" data-act="del-tx" data-id="${t.id}">Hapus</button>`
+      ];
+    }),
+    [4, 5, 6],
+    ["","","","TOTAL", rp(totVehicle), rp(totSnack), rp(inc), ""]
   );
 
   $("#tex").innerHTML = tbl(
@@ -1129,7 +1150,11 @@ function renderAdmin() {
     const ops = getOps(t);
     const totalComm = comm(t);
     const k = VN[t.vehicleType];
-    const shareAmount = (Number(t.amount) || 0) / ops.length;
+    // Hanya bagi komisi dari jasa cuci
+    const sAmt = t.snackAmount !== undefined ? t.snackAmount : (t.extras?.reduce((s, x) => s + (x.price * x.qty), 0) || 0);
+    const vAmt = t.vehicleAmount !== undefined ? t.vehicleAmount : (t.amount - sAmt);
+
+    const shareVAmount = vAmt / ops.length;
     const shareComm = totalComm / ops.length;
     const shareCount = 1 / ops.length;
 
@@ -1137,7 +1162,7 @@ function renderAdmin() {
       const o = m[opName] ??= {c: Object.fromEntries(VK.map(k => [k, 0])), n: 0, r: 0, k: 0};
       if (k) o.c[k] += shareCount;
       o.n += shareCount;
-      o.r += shareAmount;
+      o.r += shareVAmount; // Tampilkan pendapatan jasa saja (biar adil)
       o.k += shareComm;
     });
   });
@@ -1153,19 +1178,22 @@ function renderAdmin() {
   }, {c: {}, n: 0, r: 0, k: 0});
   
   $("#tkom").innerHTML = tbl(
-    ["Operator", ...VK.map(k => V[k]), "Total Kendaraan", "Total Pendapatan", "Komisi"],
+    ["Operator", ...VK.map(k => V[k]), "Total Kendaraan", "Pendapatan Jasa", "Komisi"],
     komRows,
     [1,2,3,4,5,6,7],
     komRows.length ? ["TOTAL", ...VK.map(k => formatC(komTotal.c[k] || 0)), formatC(komTotal.n), rp(komTotal.r), rp(komTotal.k)] : null
   );
 
   const days = {};
-  const D = d => days[d] ??= {n: 0, pay: {}, inc: 0, out: 0};
+  const D = d => days[d] ??= {n: 0, pay: {}, inc: 0, out: 0, snack: 0, vehicle: 0};
   tx.forEach(t => {
     const x = D(ymd(tsd(t)));
     x.n++;
     x.inc += Number(t.amount) || 0;
     x.pay[t.paymentType] = (x.pay[t.paymentType] || 0) + (Number(t.amount) || 0);
+    const sAmt = t.snackAmount !== undefined ? t.snackAmount : (t.extras?.reduce((s, it) => s + (it.price * it.qty), 0) || 0);
+    x.snack += sAmt;
+    x.vehicle += (t.amount - sAmt);
   });
   ex.forEach(e => { D(ymd(tsd(e))).out += Number(e.amount) || 0; });
   const pts = S.opt.paymentTypes;
@@ -1175,12 +1203,12 @@ function renderAdmin() {
     const x = days[d];
     const s = x.inc - x.out;
     cum += s;
-    return [d, x.n, ...pts.map(p => rp(x.pay[p] || 0)), rp(x.inc), rp(x.out), rp(s), rp(cum)];
+    return [d, x.n, rp(x.vehicle), rp(x.snack), ...pts.map(p => rp(x.pay[p] || 0)), rp(x.inc), rp(x.out), rp(s), rp(cum)];
   });
   $("#trek").innerHTML = tbl(
-    ["Tanggal", "Jml Kendaraan", ...pts, "Total Pemasukan", "Pengeluaran", "Selisih Harian", "Saldo Kumulatif"],
+    ["Tanggal", "Kendaraan", "Jasa Cuci", "Jajanan", ...pts, "Total Masuk", "Keluar", "Selisih", "Kumulatif"],
     rekapRows,
-    pts.map((_, i) => i + 1).concat([pts.length + 2, pts.length + 3, pts.length + 4, pts.length + 5])
+    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   );
 }
 
@@ -1234,11 +1262,14 @@ $("#eb").onclick = async () => {
 };
 
 $("#xl").onclick = async () => {
-  const tx = inR(S.tx).map(t => ({
-    "No. Struk": t.receiptNumber, "Tanggal": fdt(tsd(t)), "Kategori": t.vehicleType, "Nama Kendaraan": t.vehicleName || "",
-    "Plat Nomor": t.licensePlate || "", "WhatsApp": t.whatsapp || "", "Operator": getOps(t).join(", "),
-    "Jenis Transaksi": t.paymentType, "Jumlah (Rp)": Number(t.amount) || 0, "Catatan": t.notes || ""
-  }));
+  const tx = inR(S.tx).map(t => {
+    const sAmt = t.snackAmount !== undefined ? t.snackAmount : (t.extras?.reduce((s, x) => s + (x.price * x.qty), 0) || 0);
+    return {
+      "No. Struk": t.receiptNumber, "Tanggal": fdt(tsd(t)), "Kategori": t.vehicleType, "Nama Kendaraan": t.vehicleName || "",
+      "Plat Nomor": t.licensePlate || "", "Operator": getOps(t).join(", "), "Jenis Transaksi": t.paymentType,
+      "Jasa Cuci (Rp)": (t.amount - sAmt), "Jajanan (Rp)": sAmt, "Total (Rp)": Number(t.amount) || 0, "Catatan": t.notes || ""
+    };
+  });
 
   const ex = inR(S.ex).map(e => ({
     "Tanggal": ymd(tsd(e)), "Keterangan": e.description, "Kategori": e.category, "Jumlah (Rp)": Number(e.amount) || 0
@@ -1247,9 +1278,10 @@ $("#xl").onclick = async () => {
   const komData = {};
   inR(S.tx).forEach(t => {
     const ops = getOps(t);
-    const amt = Number(t.amount) || 0;
+    const sAmt = t.snackAmount !== undefined ? t.snackAmount : (t.extras?.reduce((s, x) => s + (x.price * x.qty), 0) || 0);
+    const vAmt = t.amount - sAmt;
     const kom = comm(t);
-    const shareAmt = amt / ops.length;
+    const shareAmt = vAmt / ops.length;
     const shareKom = kom / ops.length;
     const shareCount = 1 / ops.length;
     ops.forEach(opName => {
@@ -1261,16 +1293,16 @@ $("#xl").onclick = async () => {
   const komRows = Object.entries(komData).map(([name, data]) => ({
     "Nama Operator": name,
     "Total Kendaraan": Number.isInteger(data.count) ? data.count : data.count.toFixed(1),
-    "Total Pendapatan (Rp)": Math.round(data.rev),
+    "Pendapatan Jasa (Rp)": Math.round(data.rev),
     "Komisi (Rp)": Math.round(data.comm)
   }));
 
   try {
     const wb = XLSX.utils.book_new();
-    const totalIn = tx.reduce((a, r) => a + r["Jumlah (Rp)"], 0);
-    if (tx.length) tx.push({"No. Struk": "TOTAL", "Jumlah (Rp)": totalIn});
+    const totalIn = tx.reduce((a, r) => a + r["Total (Rp)"], 0);
+    if (tx.length) tx.push({"No. Struk": "TOTAL", "Total (Rp)": totalIn});
     const wsIn = XLSX.utils.json_to_sheet(tx);
-    wsIn["!cols"] = [{wch:18},{wch:22},{wch:14},{wch:18},{wch:14},{wch:16},{wch:20},{wch:14},{wch:14},{wch:20}];
+    wsIn["!cols"] = [{wch:18},{wch:22},{wch:14},{wch:18},{wch:14},{wch:16},{wch:14},{wch:14},{wch:14},{wch:14},{wch:20}];
     XLSX.utils.book_append_sheet(wb, wsIn, "Pemasukan");
 
     const totalOut = ex.reduce((a, r) => a + r["Jumlah (Rp)"], 0);
@@ -1326,7 +1358,6 @@ function fillSet() {
   });
 }
 
-/* --- LOGIKA SETTING JAJANAN (DIPERBAIKI POSISINYA) --- */
 $("#btn-add-snack").onclick = async () => {
   const name = $("#in-snack-name").value.trim();
   const price = parseNum($("#in-snack-price").value);
