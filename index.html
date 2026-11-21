@@ -438,6 +438,42 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
   background: #1a2f4c;
   color: #fff;
 }
+
+/* --- CSS JAJANAN --- */
+.snack-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+.snack-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #0d1626;
+  border: 1px solid var(--line);
+  padding: 10px 14px;
+  border-radius: 8px;
+  min-width: 200px;
+  flex: 1 1 auto;
+}
+.snack-item span {
+  font-size: 15px;
+  font-weight: 500;
+}
+.snack-item input {
+  width: 70px;
+  min-height: 44px;
+  padding: 8px;
+  font-size: 18px;
+  text-align: center;
+  margin-left: 12px;
+  border-color: var(--a);
+  background: #1a2f4c;
+  color: #fff;
+  font-weight: bold;
+}
+  
 </style>
   <link rel="manifest" href="/manifest.json">
   <meta name="theme-color" content="#1E90FF">
@@ -502,11 +538,10 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
         <input id="wa" placeholder="08123456789" inputmode="tel" maxlength="20" autocomplete="off">
         <span class="hint">Format: 08xx atau 628xx. Untuk kirim struk otomatis.</span>
       </div>
-      <div style="grid-column: 1 / -1;">
-        <label>Nama Operator <span class="opt">(bisa pilih lebih dari 1)</span></label>
-        <div id="op-list" class="op-list"></div>
+            <div style="grid-column: 1 / -1; margin-top: 10px;">
+        <label>Jajanan / Tambahan <span class="opt">(isi angka jika customer beli)</span></label>
+        <div id="snack-list-kasir" class="snack-list"></div>
       </div>
-      <div><label>Jenis Pembayaran</label><select id="pay"></select></div>
       <div>
         <label>Total Pembelian (Rp)</label>
         <input type="text" id="amt" inputmode="numeric" placeholder="0" autocomplete="off">
@@ -623,6 +658,13 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
       <button data-add="expenseCategories">Tambah</button>
     </div>
   </div>
+    <h3>Menu Jajanan</h3>
+    <div class="row" style="margin-top:4px">
+      <input id="in-snack-name" placeholder="Nama Jajanan (cth: Pop Mie)" style="max-width:200px">
+      <input type="text" id="in-snack-price" inputmode="numeric" placeholder="Harga (Rp)" style="max-width:150px">
+      <button id="btn-add-snack">Tambah</button>
+    </div>
+    <div class="w" id="ch-snacks" style="margin-top: 10px;"></div>
 </section>
 
 <!-- ============ STATISTIK ============ -->
@@ -795,6 +837,7 @@ const S = {
     paymentTypes:["Cash","Transfer","QRIS"],
     expenseCategories:["Sabun & Shampoo","Chemical / Wax","Listrik & Air","Lainnya"]
   },
+  snacks: [], // 
   tx: [], ex: []
 };
 
@@ -852,6 +895,15 @@ onSnapshot(sref("vehiclePricing"), s => {
 onSnapshot(sref("dropdownOptions"), s => {
   if (s.exists()) S.opt = {...S.opt, ...s.data()};
   fillKasir(); fillSet(); fillExp();
+}, err);
+  onSnapshot(sref("snackMenu"), s => {
+  if (s.exists() && s.data().items) {
+    S.snacks = s.data().items;
+  } else {
+    S.snacks = [];
+  }
+  fillSnacksKasir();
+  fillSnacksSet();
 }, err);
 
 onSnapshot(query(collection(db, "transactions"), orderBy("timestamp", "desc")), s => {
@@ -937,9 +989,67 @@ function fillKasir() {
   fillSel($("#pay"), S.opt.paymentTypes);
 }
 
+function fillSnacksKasir() {
+  const el = $("#snack-list-kasir");
+  if (!el) return;
+  if (S.snacks.length === 0) {
+    el.innerHTML = `<span style="opacity:.5;font-size:13px">Belum ada menu jajanan. Tambahkan di Pengaturan.</span>`;
+    return;
+  }
+  el.innerHTML = S.snacks.map(sn => `
+    <label class="snack-item">
+      <span>${esc(sn.name)} (${rp(sn.price)})</span>
+      <input type="number" min="0" value="0" class="snack-qty" data-name="${esc(sn.name)}" data-price="${sn.price}">
+    </label>
+  `).join("");
+
+  document.querySelectorAll(".snack-qty").forEach(inp => {
+    inp.addEventListener("input", () => {
+      if (inp.value < 0) inp.value = 0;
+      recalculateTotal();
+    });
+  });
+}
+
+function fillSnacksSet() {
+  const el = $("#ch-snacks");
+  if (!el) return;
+  if (S.snacks.length === 0) {
+    el.innerHTML = `<div class="empty">Belum ada menu jajanan</div>`;
+    return;
+  }
+  el.innerHTML = `
+    <table>
+      <thead><tr><th>Nama Jajanan</th><th class="n">Harga</th><th>Aksi</th></tr></thead>
+      <tbody>
+        ${S.snacks.map((sn, i) => `
+          <tr>
+            <td>${esc(sn.name)}</td>
+            <td class="n">${rp(sn.price)}</td>
+            <td><button class="icon-btn del" data-del-snack="${i}">Hapus</button></td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>`;
+}
+
+function recalculateTotal() {
+  let total = 0;
+  const v = $("#vt").value;
+  const k = VN[v];
+  if (k) total += (S.price[k]?.rate || 0);
+  
+  document.querySelectorAll(".snack-qty").forEach(inp => {
+    const qty = parseInt(inp.value) || 0;
+    const price = parseInt(inp.dataset.price) || 0;
+    if (qty > 0) total += (qty * price);
+  });
+  
+  $("#amt").value = total ? fmtNum(total) : "";
+}
+
 $("#vt").onchange = () => {
-  const k = VN[$("#vt").value];
-  $("#amt").value = k ? fmtNum(S.price[k].rate) : "";
+  recalculateTotal();
 };
 
 $("#amt").addEventListener("input", e => {
@@ -1016,6 +1126,8 @@ function resetKasir(keepDate = false) {
     _dtTouched = false;
     $("#dt").value = toLocalDT(new Date());
   }
+    document.querySelectorAll(".snack-qty").forEach(inp => inp.value = "0");
+  nextNo();
   nextNo();
   updateDtHint();
   $("#vt").focus();
@@ -1066,6 +1178,17 @@ if (!dtVal) return toast("Tanggal transaksi tidak valid.", "err");
 const now = new Date(dtVal);
 if (isNaN(now.getTime())) return toast("Tanggal transaksi tidak valid.", "err");
 
+  const extras = [];
+  document.querySelectorAll(".snack-qty").forEach(inp => {
+    const qty = parseInt(inp.value) || 0;
+    if (qty > 0) {
+      extras.push({
+        name: inp.dataset.name,
+        price: parseInt(inp.dataset.price) || 0,
+        qty: qty
+      });
+    }
+  });
 nextNo();
 const data = {
   receiptNumber: $("#rn").value,
@@ -1076,7 +1199,8 @@ const data = {
     operatorNames: selectedOps, // <--- Ubah 'operatorName' jadi 'operatorNames' (pakai s)
     paymentType: $("#pay").value,
     amount: amt,
-    notes: $("#note").value.trim()
+        notes: $("#note").value.trim(),
+    extras: extras //
   };
 
   const btnP = $("#sp"), btnS = $("#ss");
@@ -1116,8 +1240,16 @@ let _lastStruk = null;
 
 function showStruk(d, t, showWABtn) {
   _lastStruk = {data: d, time: t};
-  const r = (a, b) => `<div class="r"><span>${esc(a)}</span><span>${esc(b)}</span></div>`;
+    const r = (a, b) => `<div class="r"><span>${esc(a)}</span><span>${esc(b)}</span></div>`;
   const vname = d.vehicleName ? ` (${esc(d.vehicleName)})` : "";
+  
+  let extrasHtml = "";
+  if (d.extras && d.extras.length > 0) {
+    d.extras.forEach(x => {
+      extrasHtml += r(`${esc(x.name)} x${x.qty}`, rp(x.price * x.qty));
+    });
+  }
+
   $("#struk").innerHTML = `
     <h4>${esc(S.gen.businessName)}</h4>
     <p class="c">${esc(S.gen.address)}</p>
@@ -1129,6 +1261,7 @@ function showStruk(d, t, showWABtn) {
     ${r("Plat", d.licensePlate || "-")}
     ${r("Operator", getOps(d).join(", "))}
     ${r("Bayar", d.paymentType)}
+    ${extrasHtml ? `<hr>${extrasHtml}` : ""}
     <hr>
     <div class="r"><b>TOTAL</b><b>${rp(d.amount)}</b></div>
     <hr>
@@ -1152,6 +1285,12 @@ $("#pwa").onclick = () => {
 function buildWAText(d, t) {
   const line = "━━━━━━━━━━━━━━━━";
   const vname = d.vehicleName ? ` (${d.vehicleName})` : "";
+  
+  let extrasText = "";
+  if (d.extras && d.extras.length > 0) {
+    extrasText = d.extras.map(x => `+ ${x.name} x${x.qty} : ${rp(x.price * x.qty)}`).join("\n");
+  }
+
   return [
     `*${S.gen.businessName.toUpperCase()}*`,
     S.gen.address,
@@ -1160,9 +1299,10 @@ function buildWAText(d, t) {
     `Tanggal   : ${fdt(t)}`,
     `Kendaraan : ${d.vehicleType}${vname}`,
     `Plat      : ${d.licensePlate || "-"}`,
-    `Operator  : ${getOps(d).join(", ")}`, // di buildWAText
+    `Operator  : ${getOps(d).join(", ")}`,
     `Bayar     : ${d.paymentType}`,
     line,
+    extrasText ? `${extrasText}\n${line}` : "",
     `*TOTAL : ${rp(d.amount)}*`,
     line,
     d.notes ? `Catatan: ${d.notes}` : "",
@@ -1528,6 +1668,41 @@ function fillSet() {
   if (document.activeElement.id !== "ga") $("#ga").value = S.gen.address;
   if (document.activeElement.id !== "gf") $("#gf").value = S.gen.receiptFooter;
 
+/* --- LOGIKA SETTING JAJANAN --- */
+$("#btn-add-snack").onclick = async () => {
+  const name = $("#in-snack-name").value.trim();
+  const price = parseNum($("#in-snack-price").value);
+  if (!name) return toast("Nama jajanan harus diisi.", "err");
+  if (!(price > 0)) return toast("Harga harus lebih dari 0.", "err");
+  if (S.snacks.some(s => s.name.toLowerCase() === name.toLowerCase())) return toast("Jajanan sudah ada.", "err");
+
+  S.snacks.push({ name, price });
+  $("#in-snack-name").value = "";
+  $("#in-snack-price").value = "";
+  
+  try {
+    await setDoc(sref("snackMenu"), { items: S.snacks });
+    toast("Jajanan ditambahkan ✔", "ok");
+  } catch (e) { err(e); }
+};
+
+$("#in-snack-price").addEventListener("input", e => {
+  const n = parseNum(e.target.value);
+  e.target.value = n ? fmtNum(n) : "";
+});
+
+document.addEventListener("click", async e => {
+  const btn = e.target.closest("[data-del-snack]");
+  if (!btn) return;
+  const idx = parseInt(btn.dataset.delSnack);
+  if (!confirm(`Hapus jajanan "${S.snacks[idx].name}"?`)) return;
+  
+  S.snacks.splice(idx, 1);
+  try {
+    await setDoc(sref("snackMenu"), { items: S.snacks });
+    toast("Jajanan dihapus", "ok");
+  } catch (e) { err(e); }
+});
   ["operators","paymentTypes","expenseCategories"].forEach(k => {
     const el = $("#ch-" + k);
     if (!el) return;
@@ -1908,6 +2083,8 @@ fillExp();
 fillSet();
 $("#dt").value = toLocalDT(new Date());
 route();
+fillSnacksKasir();
+fillSnacksSet();
 $("#vt").focus();
 </script>
 <script>
