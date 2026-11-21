@@ -538,7 +538,14 @@ tfoot td{background:#0d1626;font-weight:700;border-top:2px solid var(--a)}
         <input id="wa" placeholder="08123456789" inputmode="tel" maxlength="20" autocomplete="off">
         <span class="hint">Format: 08xx atau 628xx. Untuk kirim struk otomatis.</span>
       </div>
-            <div style="grid-column: 1 / -1; margin-top: 10px;">
+                  <!-- BLOK OPERATOR YANG HILANG (TAMBAHKAN INI) -->
+      <div style="grid-column: 1 / -1;">
+        <label>Nama Operator <span class="opt">(bisa pilih lebih dari 1)</span></label>
+        <div id="op-list" class="op-list"></div>
+      </div>
+
+      <!-- JAJANAN KASIR -->
+      <div style="grid-column: 1 / -1; margin-top: 10px;">
         <label>Jajanan / Tambahan <span class="opt">(isi angka jika customer beli)</span></label>
         <div id="snack-list-kasir" class="snack-list"></div>
       </div>
