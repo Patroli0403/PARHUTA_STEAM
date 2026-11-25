@@ -1107,12 +1107,12 @@ function renderAdmin() {
     ["Laba Bersih", rp(net), net >= 0 ? "hi" : "lo"]
   ].map(([a, b, cls]) => `<div class="stat ${cls}"><small>${a}</small><div>${b}</div></div>`).join("");
 
-  // PERBAIKAN TABEL PEMASUKAN: Pisahkan Jasa Cuci dan Jajanan
+    // TABEL PEMASUKAN (Plat & Bayar Kembali)
   let totVehicle = 0;
   let totSnack = 0;
   
   $("#tin").innerHTML = tbl(
-    ["No. Struk","Tanggal","Kendaraan","Operator","Jasa Cuci","Jajanan","Total","Aksi"],
+    ["Tanggal","Kendaraan","Plat","Operator","Bayar","Jasa Cuci","Jajanan","Total","Aksi"],
     tx.map(t => {
       const sAmt = t.snackAmount !== undefined ? t.snackAmount : (t.extras?.reduce((s, x) => s + (x.price * x.qty), 0) || 0);
       const vAmt = t.vehicleAmount !== undefined ? t.vehicleAmount : (t.amount - sAmt);
@@ -1120,10 +1120,11 @@ function renderAdmin() {
       totSnack += sAmt;
       
       return [
-        esc(t.receiptNumber),
         fdt(tsd(t)),
         esc(t.vehicleType) + (t.vehicleName ? ` (${esc(t.vehicleName)})` : ""),
+        esc(t.licensePlate || "-"), // <--- PLAT NOMOR KEMBALI
         esc(getOps(t).join(", ")),
+        esc(t.paymentType),         // <--- JENIS BAYAR KEMBALI
         rp(vAmt),
         sAmt > 0 ? rp(sAmt) : `<span style="opacity:.4">-</span>`,
         rp(t.amount),
@@ -1131,8 +1132,8 @@ function renderAdmin() {
          <button class="icon-btn del" data-act="del-tx" data-id="${t.id}">Hapus</button>`
       ];
     }),
-    [4, 5, 6],
-    ["","","","TOTAL", rp(totVehicle), rp(totSnack), rp(inc), ""]
+    [5, 6, 7], // index untuk kolom angka (Jasa, Jajanan, Total)
+    ["","","","","TOTAL", rp(totVehicle), rp(totSnack), rp(inc), ""]
   );
 
   $("#tex").innerHTML = tbl(
